@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>진로 빌드업 맵 탐구 보고서</title>
+<meta name="description" content="봉일천고 1학년 진로 빌드업 맵 활동: 관심에서 질문을 만들고, 자료를 찾아 답하는 탐구 보고서를 5단계로 쓰고 저장합니다.">
+<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png?v=2" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+<link rel="stylesheet" href="/assets/site.css?v=1">
 
 <script>
 /* ============================================================
@@ -159,114 +164,214 @@ const RUBRIC = [["t_r1", "질문"], ["t_r2", "자료"], ["t_r3", "이해"], ["t_
 </script>
 
 <style>
-:root { --ink:#1c2430; --mut:#5b6772; --acc:#1f5f6b; --acc2:#17494f; --tint:#eaf2f3; --line:#cfd6da; --soft:#f5f7f8; --warn:#8a4b12; --warnbg:#fbf2e6; --ok:#1d6b3a; --bad:#a3271f; }
+/* 진로진학부 공통 스타일(/assets/site.css)의 --bon-* 값을 쓰고, 파일을 바로 열 때를 위해 같은 값을 대신 넣어 둔다 */
+:root {
+  --bg: var(--bon-bg, #f4f5f7); --card: var(--bon-card, #fff); --soft: var(--bon-soft, #eef1f5); --subtle: #f7f8fa;
+  --text: var(--bon-text, #111827); --body: var(--bon-body, #374151); --muted: var(--bon-muted, #6b7280);
+  --line: var(--bon-line, #e5e7eb); --line-strong: #cfd4dc;
+  --radius: var(--bon-radius, 16px); --radius-sm: var(--bon-radius-sm, 10px);
+  --shadow: var(--bon-shadow, 0 1px 2px rgba(17,24,39,.04), 0 2px 8px rgba(17,24,39,.05));
+  /* 이 사이트의 고유색: 다른 여섯 사이트(파랑·보라·청록·초록·주황·분홍)와 겹치지 않는 황토색 */
+  --acc: #a16207; --acc-ink: #fff; --bon-accent: var(--acc);
+  --acc-soft: color-mix(in srgb, var(--acc) 9%, var(--card));
+  --acc-line: color-mix(in srgb, var(--acc) 35%, var(--line));
+  --ok: #15803d; --ok-soft: color-mix(in srgb, #15803d 9%, var(--card));
+  --bad: #b91c1c; --bad-soft: #fdf0ef;
+  --font: var(--bon-font, "Pretendard Variable", Pretendard, system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --subtle: #1d2129; --line-strong: #3b414d;
+    --acc: #facc15; --acc-ink: #1c1606;
+    --ok: #4ade80; --ok-soft: color-mix(in srgb, #4ade80 10%, var(--card));
+    --bad: #f87171; --bad-soft: #2e1b1b;
+  }
+}
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; color: var(--ink); background: #eef1f2; line-height: 1.6; font-size: 16px; word-break: keep-all; overflow-wrap: anywhere; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 90px; }
+body { margin: 0; background: var(--bg); color: var(--body); font-family: var(--font); font-size: 16px; line-height: 1.65; word-break: keep-all; overflow-wrap: anywhere; -webkit-font-smoothing: antialiased; }
+body.has-bar { padding-bottom: 76px; }
 button, input, textarea, select { font: inherit; color: inherit; }
-.wrap { max-width: 760px; margin: 0 auto; padding: 14px 14px 110px; }
-.wrap.wide { max-width: 1180px; }
-.top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-.top h1 { font-size: 20px; margin: 0; flex: 1; min-width: 200px; letter-spacing: -0.3px; }
-.top .who { font-size: 14px; color: var(--mut); }
-.panel { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
-.demo { background: var(--warnbg); border: 1px solid #e3c9a2; color: var(--warn); border-radius: 8px; padding: 8px 12px; font-size: 14px; margin-bottom: 12px; }
-.btn { border: 1px solid var(--acc); background: var(--acc); color: #fff; border-radius: 8px; padding: 10px 16px; font-weight: 700; cursor: pointer; }
-.btn:hover { background: var(--acc2); }
-.btn.ghost { background: #fff; color: var(--acc); }
-.btn.ghost:hover { background: var(--tint); }
-.btn.small { padding: 6px 10px; font-size: 14px; font-weight: 600; }
-.btn.danger { border-color: var(--bad); color: var(--bad); background: #fff; }
-.btn:disabled { opacity: .55; cursor: default; }
-:focus-visible { outline: 3px solid #7fb6c0; outline-offset: 2px; }
+a { color: var(--acc); }
+h1, h2, h3, h4 { color: var(--text); }
+.wrap { max-width: 792px; margin: 0 auto; padding: 0 16px; }
+.wrap.wide { max-width: 1160px; }
+body:not(.is-wide) .bon-bar { --bon-max: 792px; }
+:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 
-label.fl { display: block; font-weight: 700; margin: 14px 0 4px; }
-label.fl .req { color: var(--acc); font-weight: 700; font-size: 13px; margin-left: 4px; }
-.hint { color: var(--mut); font-size: 14px; margin: 0 0 6px; }
-.tpl { display: inline-block; background: var(--tint); color: var(--acc2); font-size: 14px; padding: 2px 8px; border-radius: 6px; margin: 0 0 6px; }
-input[type=text], input[type=password], textarea, select { width: 100%; border: 1px solid #9aa7ae; border-radius: 8px; padding: 10px 12px; background: #fff; }
-textarea { resize: vertical; min-height: 60px; line-height: 1.6; }
+/* 경로 줄·바닥글: 공통 파일이 없을 때(파일을 바로 열 때)의 모양 */
+.bon-bar { background: var(--card); border-bottom: 1px solid var(--line); font-size: .82rem; line-height: 1.4; }
+.bon-bar-in { max-width: var(--bon-max, 792px); margin: 0 auto; padding: 8px 16px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bon-bar a { font-weight: 700; text-decoration: none; color: var(--bon-brand, #1e3a8a); flex: none; }
+.bon-bar span { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bon-footer { margin: 40px 0 28px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; }
+.bon-footer p { margin: 0; }
+.bon-header { padding: 26px 0 6px; }
+.bon-title { margin: 6px 0 10px; font-size: clamp(1.8rem, 4.6vw, 2.5rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.2; }
+.bon-lead { margin: 0; color: var(--muted); font-size: 1.05rem; }
 
-.nav { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px; }
-.nav button { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 8px 2px; cursor: pointer; text-align: center; line-height: 1.3; }
-.nav button b { display: block; font-size: 14px; }
-.nav button span { font-size: 12px; color: var(--mut); }
-.nav button[aria-current=true] { border-color: var(--acc); background: var(--acc); color: #fff; }
-.nav button[aria-current=true] span { color: #d6e8ea; }
+/* 머리 줄(로그인한 뒤) */
+.top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 18px 0 12px; }
+.top h1 { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.03em; margin: 0; flex: 1; min-width: 200px; line-height: 1.3; }
+.who { display: inline-flex; align-items: center; gap: 6px; font-size: .88rem; font-weight: 600; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; }
+.who::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
 
-.shead { border-bottom: 3px solid var(--acc); padding-bottom: 8px; margin-bottom: 12px; }
-.shead .badge { display: inline-block; background: var(--acc); color: #fff; font-weight: 700; font-size: 13px; padding: 2px 10px; border-radius: 6px; }
-.shead .badge.hw { background: #fff; color: var(--acc); border: 1.5px solid var(--acc); }
-.shead h2 { margin: 6px 0 2px; font-size: 21px; letter-spacing: -0.3px; }
-.shead p { margin: 0; color: var(--mut); font-size: 14px; }
-.guide { background: var(--tint); border-left: 4px solid var(--acc); padding: 10px 14px; margin: 12px 0; border-radius: 0 8px 8px 0; font-size: 15px; }
-.guide h4 { margin: 0 0 4px; color: var(--acc); font-size: 15px; }
-.guide ul { margin: 0; padding-left: 18px; }
-.ex { background: var(--soft); border: 1px dashed #9aa7ae; padding: 10px 14px; margin: 12px 0; border-radius: 8px; font-size: 15px; }
-.ex h4 { margin: 0 0 4px; font-size: 15px; }
-.ex p { margin: 2px 0; }
-.warn { background: var(--warnbg); border-left: 4px solid var(--warn); padding: 10px 14px; margin: 12px 0; border-radius: 0 8px 8px 0; font-size: 15px; }
-h3.step { font-size: 17px; margin: 22px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
-h3.step small { font-weight: 400; color: var(--mut); font-size: 14px; margin-left: 6px; }
-.card { border: 1px solid #9aa7ae; border-radius: 10px; margin: 14px 0; overflow: hidden; }
-.card > h4 { margin: 0; background: var(--acc); color: #fff; padding: 6px 14px; font-size: 15px; }
-.card > div { padding: 0 14px 14px; }
-.tfb { border: 2px solid var(--acc); border-radius: 10px; padding: 10px 14px; margin: 12px 0; background: #fff; }
-.tfb b { color: var(--acc); }
-.tfb.wait { border: 1px dashed #9aa7ae; color: var(--mut); font-size: 14px; }
-.bar { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); padding: 10px 14px; display: flex; gap: 10px; align-items: center; justify-content: center; z-index: 5; }
-.bar .state { font-size: 14px; color: var(--mut); min-width: 120px; }
-.bar .state.dirty { color: var(--warn); font-weight: 700; }
-.toast { position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 15px; z-index: 9; max-width: 90vw; }
-.toast.err { background: var(--bad); }
-details.ref { border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; margin: 12px 0; background: #fff; }
-details.ref summary { cursor: pointer; font-weight: 700; color: var(--acc); }
-details.ref ol { margin: 8px 0; padding-left: 20px; }
+/* 상자 */
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 24px; margin-bottom: 14px; }
+.demo { background: var(--acc-soft); border: 1px solid var(--acc-line); color: var(--text); border-radius: 12px; padding: 10px 14px; font-size: .9rem; margin: 0 0 12px; }
+.demo b { color: var(--acc); }
+.note { background: var(--soft); border-radius: 12px; padding: 12px 16px; margin: 14px 0; font-size: .93rem; }
+.note h4 { margin: 0 0 4px; font-size: .95rem; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+.note h4::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--acc); flex: none; }
+.note ul { margin: 0; padding-left: 20px; }
+.note li { margin: 2px 0; }
+.note p { margin: 0; }
+.ex { background: var(--subtle); border-left: 3px solid var(--line-strong); border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 14px 0; font-size: .93rem; }
+.ex h4 { margin: 0 0 4px; font-size: .9rem; font-weight: 700; color: var(--muted); }
+.ex p { margin: 3px 0; }
+.ex p b { color: var(--text); }
+.warn { background: var(--bad-soft); border-left: 3px solid var(--bad); border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 14px 0; font-size: .93rem; }
+.warn b { color: var(--bad); }
+
+/* 버튼 */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; border: 1px solid var(--acc); background: var(--acc); color: var(--acc-ink); border-radius: var(--radius-sm); padding: 0 18px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.btn:hover { filter: brightness(1.06); }
+.btn.ghost { background: var(--card); color: var(--text); border-color: var(--line-strong); }
+.btn.ghost:hover { filter: none; background: var(--soft); }
+.btn.small { min-height: 34px; padding: 0 12px; font-size: .88rem; font-weight: 600; }
+.btn.danger { background: var(--card); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
+.btn.danger:hover { filter: none; background: var(--bad-soft); }
+.btn:disabled { opacity: .55; cursor: default; filter: none; }
+
+/* 입력칸 */
+label.fl { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text); margin: 18px 0 4px; font-size: .98rem; }
+.req { font-size: .72rem; font-weight: 700; color: var(--acc); background: var(--acc-soft); border-radius: 999px; padding: 1px 8px; }
+.hint { color: var(--muted); font-size: .88rem; margin: 0 0 6px; }
+.tpl { display: inline-block; font-size: .86rem; color: var(--body); background: var(--soft); border-radius: 8px; padding: 3px 10px; margin: 0 0 6px; }
+.tpl::before { content: "문장 틀 "; font-weight: 700; color: var(--muted); }
+input[type=text], input[type=password], textarea, select { width: 100%; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 10px 12px; background: var(--card); color: var(--text); font-size: 16px; }
+input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); }
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--acc); outline-offset: 0; border-color: transparent; }
+textarea { resize: vertical; min-height: 64px; line-height: 1.65; }
+
+/* 로그인 화면 */
+.login { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 18px; }
+.login .panel { margin: 0; }
+.login h2 { font-size: 1.1rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+.flow { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.flow li { display: grid; grid-template-columns: 30px 1fr; gap: 2px 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.flow li i { grid-row: span 2; font-style: normal; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--text); color: var(--card); font-weight: 800; font-size: .85rem; }
+.flow li.hw i { background: var(--card); color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text); }
+.flow li b { color: var(--text); font-size: .95rem; }
+.flow li span { color: var(--muted); font-size: .84rem; }
+.links { text-align: center; margin: 14px 0 0; font-size: .9rem; }
+@media (max-width: 720px) { .login { grid-template-columns: 1fr; } .login .start { order: -1; } }
+
+/* 단계 이동 */
+.nav { position: sticky; top: 0; z-index: 6; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; padding: 8px 0 10px; margin-bottom: 4px; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); }
+.nav button { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0 8px; text-align: left; border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 8px 10px; cursor: pointer; line-height: 1.3; min-width: 0; }
+.nav button i { grid-row: span 2; font-style: normal; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--soft); color: var(--text); font-weight: 800; font-size: .8rem; }
+.nav button b { font-size: .9rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav button span { font-size: .75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav button.done i { background: var(--ok); color: var(--card); }
+.nav button[aria-current=true] { border-color: var(--acc); background: var(--acc-soft); box-shadow: inset 0 0 0 1px var(--acc); }
+.nav button[aria-current=true] i { background: var(--acc); color: var(--acc-ink); }
+@media (max-width: 600px) {
+  .nav { gap: 4px; }
+  .nav button { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 6px 2px; gap: 2px; }
+  .nav button i { grid-row: auto; }
+  .nav button b { font-size: .8rem; }
+  .nav button span { font-size: .68rem; }
+}
+
+/* 단계 본문 */
+.stage { border-top: 4px solid var(--acc); }
+.shead { margin-bottom: 4px; }
+.tag { display: inline-flex; align-items: center; font-size: .78rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; color: var(--acc); background: var(--acc-soft); }
+.tag.hw { color: var(--muted); background: transparent; border: 1px solid var(--line-strong); }
+.shead h2 { margin: 8px 0 4px; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.3; }
+.shead p { margin: 0; color: var(--muted); font-size: .92rem; }
+.shead p b { color: var(--body); font-weight: 600; }
+h3.step { font-size: 1.12rem; font-weight: 700; letter-spacing: -0.02em; margin: 30px 0 0; padding-top: 18px; border-top: 1px solid var(--line); }
+h3.step small { font-weight: 500; color: var(--muted); font-size: .86rem; margin-left: 6px; }
+.card { border: 1px solid var(--line); border-top: 3px solid var(--acc); border-radius: 12px; margin: 16px 0; background: var(--card); }
+.card > h4 { margin: 0; padding: 10px 16px; font-size: 1rem; font-weight: 700; border-bottom: 1px solid var(--line); }
+.card > div { padding: 0 16px 16px; }
+.tfb { border-radius: 12px; padding: 12px 16px; margin: 16px 0 6px; background: var(--ok-soft); border: 1px solid color-mix(in srgb, var(--ok) 30%, var(--line)); }
+.tfb b { color: var(--ok); }
+.tfb.wait { background: transparent; border: 1px dashed var(--line-strong); color: var(--muted); font-size: .9rem; }
+details.ref { border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; margin: 14px 0; background: var(--subtle); }
+details.ref summary { cursor: pointer; font-weight: 700; color: var(--text); }
+details.ref ol { margin: 8px 0; padding-left: 22px; }
+
+/* 아래 저장 줄 */
+.bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 7; background: color-mix(in srgb, var(--card) 94%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--line); }
+.bar-in { max-width: 792px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 8px; align-items: center; }
+.state { flex: 1; font-size: .88rem; color: var(--muted); min-width: 0; }
+.state.dirty { color: var(--bad); font-weight: 700; }
+.state.ok { color: var(--ok); font-weight: 600; }
+.toast { position: fixed; left: 50%; bottom: 88px; transform: translateX(-50%); background: var(--text); color: var(--card); padding: 10px 18px; border-radius: 12px; font-size: .95rem; z-index: 9; max-width: calc(100vw - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+.toast.err { background: var(--bad); color: #fff; }
 
 /* 읽기 전용 보기 */
-.view h3 { font-size: 16px; margin: 18px 0 6px; padding: 4px 10px; background: var(--tint); border-left: 4px solid var(--acc); }
-.view dl { margin: 0; display: grid; grid-template-columns: 190px 1fr; border-top: 1px solid var(--line); }
-.view dt, .view dd { margin: 0; padding: 6px 8px; border-bottom: 1px solid var(--line); font-size: 14.5px; }
-.view dt { background: var(--soft); font-weight: 600; }
+.view h3 { font-size: 1rem; margin: 22px 0 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.view h3 small { font-weight: 500; font-size: .82rem; color: var(--muted); }
+.view dl { margin: 0; display: grid; grid-template-columns: 200px 1fr; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.view dt, .view dd { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: .93rem; }
+.view dl > :nth-last-child(-n+2) { border-bottom: 0; }
+.view dt { background: var(--subtle); font-weight: 600; color: var(--text); }
 .view dd { white-space: pre-wrap; }
-.view dd.empty { color: #9aa7ae; }
+.view dd.empty { color: var(--muted); }
 
 /* 교사 화면 */
 .tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-.tools select { width: auto; }
-.tabs { display: flex; gap: 6px; }
-.tabs button { border: 1px solid var(--line); background: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-.tabs button[aria-selected=true] { background: var(--acc); color: #fff; border-color: var(--acc); }
-.tblwrap { overflow-x: auto; }
-table.st { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 760px; }
-table.st th, table.st td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: center; white-space: nowrap; }
-table.st th { background: var(--soft); font-size: 13.5px; position: sticky; top: 0; }
+.tools select { width: auto; min-width: 150px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tabs button { border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 6px 14px; border-radius: 999px; cursor: pointer; font-weight: 600; font-size: .92rem; }
+.tabs button[aria-selected=true] { background: var(--text); border-color: var(--text); color: var(--card); }
+.tblwrap { overflow-x: auto; margin: 0 -8px; padding: 0 8px; }
+table.st { border-collapse: collapse; width: 100%; font-size: .92rem; min-width: 820px; }
+table.st th, table.st td { border-bottom: 1px solid var(--line); padding: 9px 8px; text-align: center; white-space: nowrap; }
+table.st th { color: var(--muted); font-size: .8rem; font-weight: 700; background: var(--card); }
 table.st td.l, table.st th.l { text-align: left; }
-table.st td.q { white-space: normal; text-align: left; min-width: 220px; max-width: 360px; }
+table.st td.l:nth-child(-n+2) { color: var(--text); font-weight: 600; }
+table.st td.q { white-space: normal; text-align: left; min-width: 220px; max-width: 380px; }
 table.st tr.row { cursor: pointer; }
-table.st tr.row:hover { background: var(--tint); }
-table.st tr.sel { background: #dcebed; }
-.s0 { color: #9aa7ae; } .s1 { color: var(--warn); font-weight: 700; } .s2 { color: var(--ok); font-weight: 700; }
-.legend { font-size: 13.5px; color: var(--mut); margin: 8px 0 0; }
-.tgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.chk { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-top: 12px; }
-.chk input { width: 20px; height: 20px; }
-.rub { display: grid; grid-template-columns: 110px 1fr; gap: 6px 10px; align-items: center; margin-top: 8px; }
-.sumcard { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; background: #fff; }
-.sumcard h4 { margin: 0 0 6px; font-size: 16px; }
-.sumcard p { margin: 3px 0; font-size: 14.5px; white-space: pre-wrap; }
-.sumcard p b { color: var(--acc2); }
-@media (max-width: 720px) { .tgrid { grid-template-columns: 1fr; } .view dl { grid-template-columns: 1fr; } .view dt { border-bottom: 0; } }
+table.st tr.row:hover { background: var(--subtle); }
+table.st tr.sel { background: var(--acc-soft); }
+.s0 { color: var(--muted); } .s1 { color: var(--acc); font-weight: 700; } .s2 { color: var(--ok); font-weight: 700; }
+.legend { font-size: .84rem; color: var(--muted); margin: 10px 0 0; }
+.dhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.dhead h2 { margin: 0; flex: 1; font-size: 1.25rem; letter-spacing: -0.02em; }
+.tgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.sub { font-weight: 700; color: var(--text); margin: 12px 0 4px; font-size: .95rem; }
+.chk { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--text); margin-top: 14px; }
+.chk input { width: 20px; height: 20px; accent-color: var(--ok); }
+.rub { display: grid; grid-template-columns: 100px 1fr; gap: 6px 10px; align-items: center; margin-top: 8px; }
+.rub span { font-weight: 600; color: var(--text); font-size: .93rem; }
+.sumcard { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; box-shadow: var(--shadow); }
+.sumcard h4 { margin: 0 0 4px; font-size: 1.02rem; }
+.sumcard h4 small { font-weight: 600; color: var(--acc); font-size: .84rem; margin-left: 6px; }
+.sumcard p { margin: 4px 0; font-size: .93rem; white-space: pre-wrap; }
+.sumcard p b { color: var(--text); }
+.sumcard .prog { font-size: .82rem; color: var(--muted); margin: 0 0 8px; white-space: normal; }
+@media (max-width: 720px) { .tgrid { grid-template-columns: 1fr; } .view dl { grid-template-columns: 1fr; } .view dt { border-bottom: 0; padding-bottom: 2px; } .panel { padding: 18px 16px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 @media print {
-  body { background: #fff; font-size: 11pt; }
-  .noprint, .bar, .nav, .toast, .demo { display: none !important; }
+  body { background: #fff; font-size: 11pt; padding: 0 !important; }
+  .noprint, .bar, .nav, .toast, .demo, .bon-bar, .bon-footer { display: none !important; }
   .wrap { max-width: none; padding: 0; }
-  .panel { border: 0; padding: 0; }
+  .panel { border: 0; padding: 0; box-shadow: none; }
 }
 </style>
 </head>
 <body>
+<nav class="bon-bar" aria-label="진로진학부 사이트"><div class="bon-bar-in"><a href="/">봉일천고등학교 진로진학부</a><span aria-current="page">진로 빌드업 맵 탐구 보고서</span></div></nav>
 <div id="app" class="wrap"></div>
+<footer class="wrap bon-footer noprint" id="foot">
+  <p>© 봉일천고등학교 진로진학부</p>
+  <p>2026학년도 1학년 중점 진로 활동</p>
+</footer>
 
 <script>
 "use strict";
@@ -377,7 +482,7 @@ function demoApi(req) {
 function answersView(d) {
   const box = h("div", { class: "view" });
   STAGES.forEach(function (st) {
-    box.append(h("h3", { text: st.badge + " · " + st.title + (filled(d[st.id]) ? "  (저장 " + d[st.id] + ")" : "  (저장 전)") }));
+    box.append(h("h3", null, st.badge + " · " + st.title, h("small", { text: filled(d[st.id]) ? "저장 " + d[st.id] : "저장 전" })));
     const dl = h("dl");
     fieldsOf(st).forEach(function (f) {
       dl.append(h("dt", { text: f.label }), h("dd", { class: filled(d[f.key]) ? "" : "empty", text: filled(d[f.key]) ? String(d[f.key]) : "—" }));
@@ -393,15 +498,17 @@ function answersView(d) {
 const S = { id: "", name: "", pin: "", data: {}, cur: "s1", dirty: false, busy: false };
 
 function demoBanner() {
-  return DEMO ? h("div", { class: "demo", text: "미리보기 모드입니다. 입력한 내용은 이 기기에만 저장되고 선생님께 전달되지 않습니다." }) : null;
+  return DEMO ? h("div", { class: "demo" }, h("b", { text: "미리보기 모드 " }), "입력한 내용은 이 기기에만 저장되고 선생님께 전달되지 않습니다.") : null;
 }
 function renderLogin() {
+  document.body.classList.remove("has-bar");
+  window.scrollTo(0, 0);
   $app.className = "wrap";
   const id = h("input", { type: "text", id: "lid", inputmode: "numeric", autocomplete: "off", maxlength: "5", placeholder: "예: 10312" });
   const name = h("input", { type: "text", id: "lname", autocomplete: "off", maxlength: "10" });
   const pin = h("input", { type: "password", id: "lpin", autocomplete: "off", maxlength: "12" });
   const go = h("button", { class: "btn", type: "submit", text: "시작하기" });
-  const form = h("form", { class: "panel", onsubmit: async function (ev) {
+  const form = h("form", { class: "panel start", onsubmit: async function (ev) {
     ev.preventDefault();
     const v = { id: id.value.trim(), name: name.value.trim(), pin: pin.value };
     if (!/^\d{4,5}$/.test(v.id)) return toast("학번은 숫자 4~5자리로 입력하세요.", true);
@@ -422,16 +529,24 @@ function renderLogin() {
     h("label", { class: "fl", for: "lname", text: "이름" }), name,
     h("label", { class: "fl", for: "lpin", text: "비밀번호" }),
     h("p", { class: "hint", text: "처음이면 내가 쓸 비밀번호를 정해서 입력합니다(4자 이상). 다음부터는 같은 비밀번호로 들어옵니다. 다른 사이트에서 쓰는 비밀번호는 쓰지 마세요." }), pin,
-    h("div", { style: "margin-top:18px" }, go));
+    h("div", { style: "margin-top:20px" }, go),
+    h("p", { class: "hint", style: "margin:12px 0 0", text: "비밀번호를 잊었으면 선생님께 초기화를 요청하세요. 쓰던 내용은 지워지지 않습니다." }));
   put($app,
-    h("div", { class: "top" }, h("h1", { text: "진로 빌드업 맵 탐구 보고서" })),
+    h("header", { class: "bon-header" },
+      h("h1", { class: "bon-title", text: "진로 빌드업 맵 탐구 보고서" }),
+      h("p", { class: "bon-lead", text: "내가 궁금한 것을 질문 하나로 만들고, 자료를 찾아 내 힘으로 답해 보는 활동입니다. 정답은 없습니다." })),
     demoBanner(),
-    h("div", { class: "guide" }, h("h4", { text: "이 활동은 무엇인가요?" }),
-      h("p", { style: "margin:0", text: "내가 궁금한 것을 질문 하나로 만들고, 자료를 찾아 내 힘으로 답해 보는 활동입니다. 수업 3번과 과제 2번, 모두 5단계로 나누어 저장합니다. 정답은 없습니다." })),
-    form,
-    h("p", { class: "hint", style: "text-align:center" }, h("a", { href: "#teacher", text: "선생님용 화면" })));
+    h("div", { class: "login" },
+      h("section", { class: "panel" },
+        h("h2", { text: "이렇게 진행해요" }),
+        h("p", { class: "hint", text: "수업 3번과 과제 2번, 모두 5단계입니다. 단계마다 저장하고 다음에 이어서 씁니다." }),
+        h("ol", { class: "flow" }, STAGES.map(function (st, i) {
+          return h("li", { class: st.kind === "과제" ? "hw" : "" }, h("i", { text: String(i + 1) }),
+            h("b", { text: st.badge + " · " + st.title }), h("span", { text: st.goal + " · " + st.time }));
+        }))),
+      form),
+    h("p", { class: "links" }, h("a", { href: "#teacher", text: "선생님용 화면" })));
 }
-
 function fieldEl(f) {
   const idv = "f_" + f.key;
   let inp;
@@ -446,7 +561,7 @@ function fieldEl(f) {
   return h("div", null,
     h("label", { class: "fl", for: idv }, f.label, f.req ? h("span", { class: "req", text: "필수" }) : null),
     f.hint ? h("p", { class: "hint", text: f.hint }) : null,
-    f.ph ? h("div", null, h("span", { class: "tpl", text: "문장 틀: " + f.ph })) : null,
+    f.ph ? h("div", null, h("span", { class: "tpl", text: f.ph })) : null,
     inp);
 }
 function markDirty() {
@@ -481,10 +596,11 @@ async function goStage(sid) {
 function renderNav() {
   const nav = document.getElementById("nav");
   if (!nav) return;
-  put(nav, STAGES.map(function (st) {
-    const s = STATUS[stageStatus(S.data, st)];
-    return h("button", { type: "button", "aria-current": st.id === S.cur ? "true" : null, onclick: function () { goStage(st.id); } },
-      h("b", { text: st.badge }), h("span", { text: s[0] + " " + s[1] }));
+  put(nav, STAGES.map(function (st, i) {
+    const n = stageStatus(S.data, st), s = STATUS[n];
+    return h("button", { type: "button", class: n === 2 ? "done" : null, "aria-current": st.id === S.cur ? "true" : null,
+      "aria-label": st.badge + " " + s[1], onclick: function () { goStage(st.id); } },
+      h("i", { text: n === 2 ? "✓" : String(i + 1) }), h("b", { text: st.badge }), h("span", { class: "s" + n, text: s[1] }));
   }));
 }
 function renderBar() {
@@ -493,10 +609,10 @@ function renderBar() {
   const st = STAGES.find(function (s) { return s.id === S.cur; });
   const saved = S.data[S.cur];
   const i = STAGES.indexOf(st);
-  put(bar, 
-    h("span", { id: "savestate", class: "state" + (S.dirty ? " dirty" : ""), text: S.dirty ? "저장 안 됨" : (saved ? "저장됨 " + saved : "아직 저장 전") }),
-    h("button", { id: "savebtn", class: "btn", type: "button", text: "저장하기", onclick: function () { saveStage(false); } }),
-    i < STAGES.length - 1 ? h("button", { class: "btn ghost", type: "button", text: "다음 단계", onclick: function () { goStage(STAGES[i + 1].id); } }) : null);
+  put(bar, h("div", { class: "bar-in" },
+    h("span", { id: "savestate", class: "state" + (S.dirty ? " dirty" : saved ? " ok" : ""), text: S.dirty ? "저장 안 됨" : (saved ? "저장됨 · " + saved : "아직 저장 전") }),
+    i < STAGES.length - 1 ? h("button", { class: "btn ghost", type: "button", text: "다음 단계", onclick: function () { goStage(STAGES[i + 1].id); } }) : null,
+    h("button", { id: "savebtn", class: "btn", type: "button", text: "저장하기", onclick: function () { saveStage(false); } })));
 }
 function teacherNote(st) {
   if (!st.check) return null;
@@ -523,7 +639,7 @@ function refBlock() {
     h("p", { class: "hint", style: "margin:6px 0 0", text: "붙인 뒤에는 이음말을 넣고 어색한 곳을 다듬습니다." }));
 }
 function blockEl(b) {
-  if (b.t === "guide") return h("div", { class: "guide" }, h("h4", { text: b.title }), h("ul", null, b.items.map(function (x) { return h("li", { text: x }); })));
+  if (b.t === "guide") return h("div", { class: "note" }, h("h4", { text: b.title }), h("ul", null, b.items.map(function (x) { return h("li", { text: x }); })));
   if (b.t === "ex") return h("div", { class: "ex" }, h("h4", { text: b.title }), b.lines.map(function (l) { return h("p", null, l[0] ? h("b", { text: l[0] + "  " }) : null, l[1]); }));
   if (b.t === "warn") return h("div", { class: "warn", text: b.text });
   if (b.t === "h") return h("h3", { class: "step" }, b.text, b.sub ? h("small", { text: b.sub }) : null);
@@ -533,6 +649,7 @@ function blockEl(b) {
   return null;
 }
 function renderStudent() {
+  document.body.classList.add("has-bar");
   const st = STAGES.find(function (s) { return s.id === S.cur; });
   $app.className = "wrap";
   put($app, 
@@ -546,17 +663,18 @@ function renderStudent() {
       } })),
     demoBanner(),
     h("div", { id: "nav", class: "nav" }),
-    h("div", { class: "panel" },
+    h("div", { class: "panel stage" },
       h("div", { class: "shead" },
-        h("span", { class: "badge" + (st.kind === "과제" ? " hw" : ""), text: st.badge + " · " + st.kind }),
+        h("span", { class: "tag" + (st.kind === "과제" ? " hw" : ""), text: st.badge + " · " + st.kind }),
         h("h2", { text: st.title }),
-        h("p", { text: "목표: " + st.goal + "  ·  " + st.time })),
+        h("p", null, h("b", { text: "목표 " }), st.goal + "  ·  " + st.time)),
       teacherNote(st),
       st.blocks.map(blockEl)),
     h("div", { id: "bar", class: "bar noprint" }));
   renderNav(); renderBar();
 }
 function renderAll() {
+  document.body.classList.remove("has-bar");
   $app.className = "wrap";
   put($app, 
     h("div", { class: "top noprint" },
@@ -578,18 +696,19 @@ function clsOf(id) { return String(id).slice(0, -2); }
 function clsName(c) { return c.length >= 2 ? c[0] + "학년 " + Number(c.slice(1)) + "반" : c + "반"; }
 
 function renderTeacherLogin() {
+  document.body.classList.remove("has-bar");
   $app.className = "wrap";
   const pw = h("input", { type: "password", id: "tpw", autocomplete: "off" });
   const go = h("button", { class: "btn", type: "submit", text: "들어가기" });
   put($app, 
     h("div", { class: "top" }, h("h1", { text: "탐구 보고서 · 선생님용" })),
-    DEMO ? h("div", { class: "demo", text: "미리보기 모드입니다. 교사 비밀번호는 demo 입니다. 이 기기에서 학생 화면으로 입력한 내용만 보입니다." }) : null,
-    h("form", { class: "panel", onsubmit: async function (ev) {
+    DEMO ? h("div", { class: "demo" }, h("b", { text: "미리보기 모드 " }), "교사 비밀번호는 demo 입니다. 이 기기에서 학생 화면으로 입력한 내용만 보입니다.") : null,
+    h("form", { class: "panel", style: "max-width:440px", onsubmit: async function (ev) {
       ev.preventDefault(); go.disabled = true;
       try { T.pw = pw.value; await loadRows(); renderTeacher(); }
       catch (e) { T.pw = ""; toast(e.message, true); go.disabled = false; }
     } }, h("label", { class: "fl", for: "tpw", text: "교사 비밀번호" }), pw, h("div", { style: "margin-top:16px" }, go)),
-    h("p", { class: "hint", style: "text-align:center" }, h("a", { href: "#", text: "학생용 화면" })));
+    h("p", { class: "links", style: "text-align:left" }, h("a", { href: "#", text: "학생용 화면으로" })));
 }
 async function loadRows() {
   const out = await api({ action: "teacher_list", tpw: T.pw });
@@ -597,6 +716,7 @@ async function loadRows() {
 }
 function shownRows() { return T.rows.filter(function (r) { return !T.cls || clsOf(r.id) === T.cls; }); }
 function renderTeacher() {
+  document.body.classList.remove("has-bar");
   $app.className = "wrap wide";
   const classes = Array.from(new Set(T.rows.map(function (r) { return clsOf(r.id); }))).sort();
   if (T.cls && classes.indexOf(T.cls) < 0) T.cls = "";
@@ -608,7 +728,7 @@ function renderTeacher() {
   put($app, 
     h("div", { class: "top" }, h("h1", { text: "탐구 보고서 · 선생님용" }),
       h("button", { class: "btn ghost small", type: "button", text: "새로 고침", onclick: async function () { try { await loadRows(); renderTeacher(); toast("새로 불러왔습니다."); } catch (e) { toast(e.message, true); } } })),
-    DEMO ? h("div", { class: "demo", text: "미리보기 모드: 이 기기에 저장된 연습 자료입니다." }) : null,
+    DEMO ? h("div", { class: "demo" }, h("b", { text: "미리보기 모드 " }), "이 기기에 저장된 연습 자료입니다.") : null,
     h("div", { class: "tools" }, sel, h("div", { class: "tabs", role: "tablist" }, tabBtn("status", "제출 현황·확인"), tabBtn("summary", "학생부 작성용 요약"))),
     T.tab === "status" ? statusTab() : summaryTab());
 }
@@ -649,7 +769,7 @@ function detailPanel(r) {
     left.append(h("div", { class: "chk" }, c, h("label", { for: "tc" + n, text: "확인 " + "①②③"[n - 1] + " (" + ["1차시 질문", "2차시 자료·근거", "3차시 최종"][n - 1] + ")" })),
       h("p", { class: "hint", text: "학생에게 보이는 한마디" }), f);
   });
-  const right = h("div", null, h("label", { class: "fl", text: "평가 기준표 (학생에게 보이지 않음)" }));
+  const right = h("div", null, h("p", { class: "sub", style: "margin-top:14px", text: "평가 기준표 · 학생에게 보이지 않음" }));
   const rub = h("div", { class: "rub" });
   RUBRIC.forEach(function (x) {
     const s = h("select", { "aria-label": x[1] }, h("option", { value: "", text: "—" }), LEVELS.map(function (o) { return h("option", { value: o, text: o }); }));
@@ -658,7 +778,7 @@ function detailPanel(r) {
   });
   const memo = h("textarea", { rows: 4, maxlength: "1500", id: "tmemo" }); memo.value = r.t_memo || "";
   inputs.t_memo = function () { return memo.value; };
-  right.append(rub, h("label", { class: "fl", for: "tmemo", text: "관찰 메모 (학생에게 보이지 않음)" }),
+  right.append(rub, h("label", { class: "fl", for: "tmemo", text: "관찰 메모 · 학생에게 보이지 않음" }),
     h("p", { class: "hint", text: "발표 때 본 모습, 질문을 바꾼 과정 등 학생부에 쓸 사실을 적어 둡니다." }), memo);
   const save = h("button", { class: "btn", type: "button", text: "확인·평가 저장", onclick: async function () {
     const data = {}; for (const k in inputs) data[k] = inputs[k]();
@@ -672,7 +792,7 @@ function detailPanel(r) {
     catch (e) { toast(e.message, true); }
   } });
   return h("div", { class: "panel", id: "detail" },
-    h("div", { class: "top" }, h("h1", { style: "font-size:18px", text: r.id + " " + r.name }), reset),
+    h("div", { class: "dhead" }, h("h2", { text: r.id + " " + r.name }), reset),
     h("div", { class: "tgrid" }, left, right),
     h("div", { style: "margin:16px 0 4px" }, save),
     answersView(r));
@@ -701,8 +821,8 @@ function summaryTab() {
     rows.map(function (r) {
       const anyStage = STAGES.some(function (st) { return stageStatus(r, st) > 0; });
       return h("div", { class: "sumcard" },
-        h("h4", { text: r.id + " " + r.name + (rubText(r) ? "  ·  " + rubText(r) : "") }),
-        h("p", { class: "hint" }, "진행: ", STAGES.map(function (st, i) {
+        h("h4", null, r.id + " " + r.name, rubText(r) ? h("small", { text: rubText(r) }) : null),
+        h("p", { class: "prog" }, "진행 ", STAGES.map(function (st, i) {
           const s = stageStatus(r, st);
           return h("span", { class: "s" + s, text: (i ? "  ·  " : "") + st.badge + " " + STATUS[s][0] + " " + STATUS[s][1] });
         })),
@@ -716,6 +836,7 @@ function summaryTab() {
 
 /* ---------- 시작 ---------- */
 function route() {
+  document.body.classList.toggle("is-wide", location.hash === "#teacher");
   if (location.hash === "#teacher") { if (T.pw) renderTeacher(); else renderTeacherLogin(); }
   else if (S.id) renderStudent(); else renderLogin();
 }
