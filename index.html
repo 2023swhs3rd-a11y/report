@@ -290,6 +290,12 @@ function h(tag, attrs) {
   return e;
 }
 const $app = document.getElementById("app");
+/* 빈 값(null·false)은 건너뛰고 내용을 바꿉니다. replaceChildren에 null을 넘기면 "null" 글자가 찍힙니다. */
+function put(el) {
+  const list = [];
+  (function add(a) { a.forEach(function (x) { if (Array.isArray(x)) add(x); else if (x != null && x !== false) list.push(x); }); })([].slice.call(arguments, 1));
+  el.replaceChildren.apply(el, list);
+}
 function fieldsOf(st) {
   const out = [];
   st.blocks.forEach(function (b) { if (b.t === "f") out.push(b); else if (b.t === "card") b.fields.forEach(function (f) { out.push(f); }); });
@@ -391,7 +397,6 @@ function demoBanner() {
 }
 function renderLogin() {
   $app.className = "wrap";
-  $app.replaceChildren();
   const id = h("input", { type: "text", id: "lid", inputmode: "numeric", autocomplete: "off", maxlength: "5", placeholder: "예: 10312" });
   const name = h("input", { type: "text", id: "lname", autocomplete: "off", maxlength: "10" });
   const pin = h("input", { type: "password", id: "lpin", autocomplete: "off", maxlength: "12" });
@@ -418,7 +423,7 @@ function renderLogin() {
     h("label", { class: "fl", for: "lpin", text: "비밀번호" }),
     h("p", { class: "hint", text: "처음이면 내가 쓸 비밀번호를 정해서 입력합니다(4자 이상). 다음부터는 같은 비밀번호로 들어옵니다. 다른 사이트에서 쓰는 비밀번호는 쓰지 마세요." }), pin,
     h("div", { style: "margin-top:18px" }, go));
-  $app.append(
+  put($app,
     h("div", { class: "top" }, h("h1", { text: "진로 빌드업 맵 탐구 보고서" })),
     demoBanner(),
     h("div", { class: "guide" }, h("h4", { text: "이 활동은 무엇인가요?" }),
@@ -476,7 +481,7 @@ async function goStage(sid) {
 function renderNav() {
   const nav = document.getElementById("nav");
   if (!nav) return;
-  nav.replaceChildren.apply(nav, STAGES.map(function (st) {
+  put(nav, STAGES.map(function (st) {
     const s = STATUS[stageStatus(S.data, st)];
     return h("button", { type: "button", "aria-current": st.id === S.cur ? "true" : null, onclick: function () { goStage(st.id); } },
       h("b", { text: st.badge }), h("span", { text: s[0] + " " + s[1] }));
@@ -488,7 +493,7 @@ function renderBar() {
   const st = STAGES.find(function (s) { return s.id === S.cur; });
   const saved = S.data[S.cur];
   const i = STAGES.indexOf(st);
-  bar.replaceChildren(
+  put(bar, 
     h("span", { id: "savestate", class: "state" + (S.dirty ? " dirty" : ""), text: S.dirty ? "저장 안 됨" : (saved ? "저장됨 " + saved : "아직 저장 전") }),
     h("button", { id: "savebtn", class: "btn", type: "button", text: "저장하기", onclick: function () { saveStage(false); } }),
     i < STAGES.length - 1 ? h("button", { class: "btn ghost", type: "button", text: "다음 단계", onclick: function () { goStage(STAGES[i + 1].id); } }) : null);
@@ -530,7 +535,7 @@ function blockEl(b) {
 function renderStudent() {
   const st = STAGES.find(function (s) { return s.id === S.cur; });
   $app.className = "wrap";
-  $app.replaceChildren(
+  put($app, 
     h("div", { class: "top noprint" },
       h("h1", { text: "진로 빌드업 맵 탐구 보고서" }),
       h("span", { class: "who", text: S.id + " " + S.name }),
@@ -553,7 +558,7 @@ function renderStudent() {
 }
 function renderAll() {
   $app.className = "wrap";
-  $app.replaceChildren(
+  put($app, 
     h("div", { class: "top noprint" },
       h("h1", { text: "내 보고서 전체 보기" }),
       h("button", { class: "btn small", type: "button", text: "인쇄", onclick: function () { window.print(); } }),
@@ -576,7 +581,7 @@ function renderTeacherLogin() {
   $app.className = "wrap";
   const pw = h("input", { type: "password", id: "tpw", autocomplete: "off" });
   const go = h("button", { class: "btn", type: "submit", text: "들어가기" });
-  $app.replaceChildren(
+  put($app, 
     h("div", { class: "top" }, h("h1", { text: "탐구 보고서 · 선생님용" })),
     DEMO ? h("div", { class: "demo", text: "미리보기 모드입니다. 교사 비밀번호는 demo 입니다. 이 기기에서 학생 화면으로 입력한 내용만 보입니다." }) : null,
     h("form", { class: "panel", onsubmit: async function (ev) {
@@ -600,7 +605,7 @@ function renderTeacher() {
     classes.map(function (c) { return h("option", { value: c, text: clsName(c) }); }));
   sel.value = T.cls;
   const tabBtn = function (id, label) { return h("button", { type: "button", role: "tab", "aria-selected": T.tab === id ? "true" : "false", text: label, onclick: function () { T.tab = id; renderTeacher(); } }); };
-  $app.replaceChildren(
+  put($app, 
     h("div", { class: "top" }, h("h1", { text: "탐구 보고서 · 선생님용" }),
       h("button", { class: "btn ghost small", type: "button", text: "새로 고침", onclick: async function () { try { await loadRows(); renderTeacher(); toast("새로 불러왔습니다."); } catch (e) { toast(e.message, true); } } })),
     DEMO ? h("div", { class: "demo", text: "미리보기 모드: 이 기기에 저장된 연습 자료입니다." }) : null,
