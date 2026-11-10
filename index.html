@@ -677,7 +677,7 @@ function detailPanel(r) {
     h("div", { style: "margin:16px 0 4px" }, save),
     answersView(r));
 }
-const SUM = [["질문", "question"], ["고른 이유", "reason"], ["찾은 답", "r2"], ["근거 1", "r3"], ["근거 2", "r4"], ["처음 예상과 비교", "r5"], ["내 생각", "r6"],
+const SUM = [["관심 진로", "career"], ["질문", "question"], ["고른 이유", "reason"], ["찾은 답", "r2"], ["근거 1", "r3"], ["근거 2", "r4"], ["처음 예상과 비교", "r5"], ["내 생각", "r6"],
   ["달라진 생각", "v2"], ["관련 학과·직업", "v4"], ["더 배우고 싶은 과목", "v5"], ["다음 질문", "v6"], ["관찰 메모", "t_memo"]];
 function rubText(r) { return RUBRIC.map(function (x) { return filled(r[x[0]]) ? x[1] + " " + r[x[0]] : ""; }).filter(Boolean).join(" · "); }
 function summaryTab() {
@@ -699,10 +699,18 @@ function summaryTab() {
     h("div", { class: "panel" },
       h("p", { style: "margin:0 0 8px", text: "학생이 쓴 내용 중 '동기 → 질문 → 과정 → 배운 점 → 후속'에 해당하는 칸만 모았습니다. 학생부 문장은 이 사실을 바탕으로 선생님이 직접 씁니다." }), copy),
     rows.map(function (r) {
+      const anyStage = STAGES.some(function (st) { return stageStatus(r, st) > 0; });
       return h("div", { class: "sumcard" },
         h("h4", { text: r.id + " " + r.name + (rubText(r) ? "  ·  " + rubText(r) : "") }),
+        h("p", { class: "hint" }, "진행: ", STAGES.map(function (st, i) {
+          const s = stageStatus(r, st);
+          return h("span", { class: "s" + s, text: (i ? "  ·  " : "") + st.badge + " " + STATUS[s][0] + " " + STATUS[s][1] });
+        })),
         SUM.filter(function (x) { return filled(r[x[1]]); }).map(function (x) { return h("p", null, h("b", { text: x[0] + ": " }), String(r[x[1]])); }),
-        SUM.some(function (x) { return filled(r[x[1]]); }) ? null : h("p", { class: "hint", text: "아직 쓴 내용이 없습니다." }));
+        SUM.some(function (x) { return x[1] !== "career" && filled(r[x[1]]); }) ? null :
+          h("p", { class: "hint", text: anyStage
+            ? "요약에 모으는 칸(탐구 질문, 2차시 결과 정리, 3차시 돌아보기)은 아직 비어 있습니다. 지금까지 쓴 내용은 '제출 현황·확인'에서 학생을 누르면 볼 수 있습니다."
+            : "아직 저장한 내용이 없습니다." }));
     }));
 }
 
