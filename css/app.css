@@ -102,13 +102,13 @@ body.is-wide #foot { max-width: 1160px; }
 .demo b { color: var(--acc); }
 .note, .ex, .warn { border-radius: var(--radius-md); padding: 14px 16px; margin: 16px 0; font-size: .94rem; }
 .note { background: var(--cb, var(--soft)); }
-.note h4, .ex h4 { margin: 0 0 6px; font-size: .98rem; font-weight: 800; }
+.note h3, .ex h3 { margin: 0 0 6px; font-size: .98rem; font-weight: 800; }
 .note ul { margin: 0; padding-left: 20px; }
 .note li { margin: 3px 0; }
 .note li::marker { color: var(--c, var(--acc)); }
 .note p { margin: 0; }
 .ex { background: var(--subtle); border: 1.5px dashed var(--line-strong); }
-.ex h4 { color: var(--muted); }
+.ex h3 { color: var(--muted); }
 .ex p { margin: 4px 0; }
 .ex p b { color: var(--text); }
 .warn { background: var(--bad-soft); color: var(--text); }
@@ -176,10 +176,10 @@ textarea { resize: vertical; min-height: 68px; line-height: 1.65; }
 .shead p b { color: var(--body); }
 @media (max-width: 520px) { .shead .big { width: 52px; height: 52px; font-size: 1.6rem; border-radius: 16px; } .shead h2 { font-size: 1.3rem; } }
 h3.step { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 1.12rem; font-weight: 800; letter-spacing: -0.02em; margin: 32px 0 0; padding-top: 20px; border-top: 2px dotted var(--line-strong); }
-h3.step .no { font-size: .8rem; font-weight: 800; color: var(--card); background: var(--c); border-radius: 999px; padding: 2px 10px; }
+h3.step .no { font-size: .8rem; font-weight: 800; color: #fff; background: var(--ci); border-radius: 999px; padding: 2px 10px; }
 h3.step small { font-weight: 500; color: var(--muted); font-size: .86rem; }
 .card { border: 1.5px solid var(--line); border-radius: var(--radius-md); margin: 18px 0; background: var(--card); overflow: hidden; }
-.card > h4 { margin: 0; padding: 10px 16px; font-size: 1rem; font-weight: 800; background: var(--cb); color: var(--text); }
+.card > h3 { margin: 0; padding: 10px 16px; font-size: 1rem; font-weight: 800; background: var(--cb); color: var(--text); }
 .card > div { padding: 0 16px 16px; }
 .tfb { border-radius: var(--radius-md); padding: 12px 16px; margin: 16px 0 6px; background: var(--ok-soft); }
 .tfb b { color: var(--ok); }
@@ -242,7 +242,7 @@ details.ref ol { margin: 8px 0; padding-left: 22px; }
 
 /* ── 추천 사이트 ── */
 .links { background: var(--cb, var(--soft)); border-radius: var(--radius-md); padding: 14px 16px; margin: 16px 0; }
-.links h4 { margin: 0 0 8px; font-size: .98rem; font-weight: 800; }
+.links h3 { margin: 0 0 8px; font-size: .98rem; font-weight: 800; }
 .lsec { margin-top: 8px; }
 .lhead { margin: 0 0 4px; font-size: .8rem; font-weight: 800; color: var(--ci, var(--muted)); }
 .links ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -390,7 +390,7 @@ body.has-bar { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 
 /* ── 🔗 이전 활동과 이어 보기 ── */
 .linkhead { margin: 24px 0 0; padding: 14px 16px; border-radius: var(--radius-md) var(--radius-md) 0 0; background: #e6f7f5; border: 1.5px solid #8fd6cc; border-bottom: 0; }
-.linkhead h4 { margin: 0 0 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 1.02rem; font-weight: 800; }
+.linkhead h3 { margin: 0 0 6px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 1.02rem; font-weight: 800; }
 .linkhead p { margin: 0; font-size: .92rem; }
 .lkex { margin-top: 8px; background: var(--card); border-radius: 10px; padding: 8px 12px; }
 .lkex p { margin: 2px 0; font-size: .88rem; }
@@ -468,3 +468,28 @@ table.st tr.sel { background: var(--acc-soft); }
   .view dt { background: #f3f4f6 !important; }
   .phead span:nth-child(odd) { background: #f3f4f6 !important; }
 }
+
+/* ---------- 선택·도전 칸 접기 ---------- */
+details.fold { margin-top: 16px; border-radius: var(--radius-md); background: #f8f6ff; border: 1.5px dashed #c4b5fd; }
+details.fold > summary { cursor: pointer; list-style: none; display: block; padding: 12px 14px; min-height: 44px; font-weight: 700; color: #5b21b6; line-height: 1.6; }
+details.fold > summary .fs { display: inline-block; margin-left: 8px; vertical-align: 1px; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: "▸ "; color: #7c3aed; }
+details.fold[open] > summary::before { content: "▾ "; }
+details.fold > summary .fs { font-size: .8rem; font-weight: 600; color: #6d28d9; background: #ede9fe; border-radius: 999px; padding: 2px 9px; }
+details.fold > .fwrap.challenge, details.fold > .card { margin: 0 10px 10px; border: 0; background: transparent; }
+details.fold > .fwrap.challenge { padding-top: 0; }
+@media (prefers-color-scheme: dark) {
+  details.fold { background: #1d1930; border-color: #5b4ba0; }
+  details.fold > summary { color: #ddd6fe; } details.fold > summary .fs { background: #2a2245; color: #c4b5fd; }
+}
+/* ---------- 교사 화면: 경고, 잠금, 확인 안 한 학생 ---------- */
+.warnbox { margin: 0 0 14px; padding: 12px 16px; border-radius: var(--radius-md); background: #fff7ed; border: 1.5px solid #fdba74; color: #7c2d12; line-height: 1.6; }
+.lockb { display: inline-block; margin-left: 6px; font-size: .75rem; font-weight: 700; color: #991b1b; background: #fee2e2; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.todo { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: .92rem; min-height: 40px; cursor: pointer; }
+.todo input { width: 18px; height: 18px; accent-color: var(--acc); }
+@media (prefers-color-scheme: dark) {
+  .warnbox { background: #2b1d10; border-color: #9a3412; color: #fed7aa; }
+  .lockb { background: #3b1414; color: #fca5a5; }
+}
+@media (prefers-color-scheme: dark) { h3.step .no { color: var(--card); background: var(--c); } }

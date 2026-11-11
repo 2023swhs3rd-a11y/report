@@ -8,6 +8,7 @@
  *   1. 구글 시트 → 확장 프로그램 → Apps Script → 이 파일 전체를 붙여 넣기
  *   2. 왼쪽 톱니바퀴(프로젝트 설정) → 스크립트 속성 → 속성 추가
  *        속성: TEACHER_PASSWORD   값: 10자 이상의 교사 비밀번호
+ *        (선택) TEACHER_PASSWORD2  값: 보조 비밀번호. 학생이 일부러 틀려 교사 화면이 막혔을 때도 들어갈 수 있다
  *      (비밀번호를 코드에 쓰지 않으므로 이 파일은 공개 저장소에 두어도 안전하다)
  *   3. 함수 목록에서 setup 실행 → 배포 → 새 배포 → 웹 앱(실행: 나, 액세스: 모든 사용자)
  *   코드를 바꾼 뒤에는 배포 → 배포 관리 → 수정 → 버전: 새 버전 → 배포 (주소는 그대로)
@@ -17,9 +18,10 @@ const SHEET_DATA = '보고서';     // 학생 한 명이 한 줄
 const SHEET_ROSTER = '명단';     // 학번·이름을 적어 두면 명단에 있는 학생만 들어올 수 있습니다
 const MAX_LEN = 3000;            // 한 칸에 저장하는 최대 글자 수
 const MAX_FAILS = 10;            // 학생 비밀번호를 이만큼 연속으로 틀리면 잠깐 잠긴다
-const LOCK_MINUTES = 15;         // 학생 잠금 시간(지나면 저절로 풀리고, 교사가 초기화해도 풀린다)
+const LOCK_MINUTES = 5;          // 학생 잠금 시간(지나면 저절로 풀리고, 교사가 초기화해도 풀린다)
 const MAX_STUDENTS = 1500;       // 명단 없이 운영할 때 등록할 수 있는 최대 학생 수(장난 등록 막기)
-const TEACHER_MAX_FAILS = 8;     // 교사 비밀번호를 10분 안에 이만큼 틀리면 10분 동안 교사 화면을 막는다
+const TEACHER_MAX_FAILS = 8;     // 교사 비밀번호를 10분 안에 이만큼 틀리면 10분 동안 막는다(보조 비밀번호 TEACHER_PASSWORD2 는 막는 중에도 들어갈 수 있다)
+const LIST_ALL_MAX = 120;        // 학생이 이보다 많으면 교사 화면은 반 단위로 불러온다
 const MIN_TEACHER_PW = 10;       // 교사 비밀번호 최소 길이
 const BACKUP_PREFIX = '백업 ';   // 초기화·백업 때 만드는 시트 이름 앞부분
 const HEADER_ROWS = 2;           // 1행: 내부 이름, 2행: 한글 설명
@@ -135,10 +137,32 @@ function teacherList_(req) {
   const d = getData_();
   const last = d.sh.getLastRow();
   const rows = [];
+  const classes = {};
+  const cls = /^\d{1,3}$/.test(String(req.cls || '')) ? String(req.cls) : '';
+  let total = 0;
+  if (last > HEADER_ROWS) {
+    // 학번 열만 먼저 읽어 반별 인원을 센다(반 고르기 목록에 씀)
+    d.sh.getRange(HEADER_ROWS + 1, 1, last - HEADER_ROWS, 1).getValues().forEach(function (v) {
+      const id = String(v[0]).trim();
+      if (!id) return;
+      total++;
+      const c = id.slice(0, -2);
+      classes[c] = (classes[c] || 0) + 1;
+    });
+  }
+  const roster = (function () {
+    const r = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_ROSTER);
+    return r ? Math.max(0, r.getLastRow() - 1) : 0;
+  })();
+  const meta = { classes: classes, total: total, roster: roster, maxFails: MAX_FAILS, lockMinutes: LOCK_MINUTES, now: Date.now() };
+  // 학생이 많으면 반을 고를 때까지 목록을 보내지 않는다
+  const partial = !cls && !req.all && total > LIST_ALL_MAX;
+  if (partial) return Object.assign({ ok: true, rows: [], partial: true }, meta);
   if (last > HEADER_ROWS) {
     const vals = d.sh.getRange(HEADER_ROWS + 1, 1, last - HEADER_ROWS, d.keys.length).getValues();
     vals.forEach(function (v) {
       if (String(v[0]) === '') return;
+      if (cls && String(v[0]).trim().slice(0, -2) !== cls) return;
       const o = {};
       d.keys.forEach(function (k, i) { if (k) o[k] = String(v[i] == null ? '' : v[i]); });
       o.hasPin = o.pin !== '';
@@ -147,7 +171,7 @@ function teacherList_(req) {
     });
   }
   rows.sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
-  return { ok: true, rows: rows };
+  return Object.assign({ ok: true, rows: rows, cls: cls }, meta);
 }
 
 function teacherSave_(req) {
@@ -221,14 +245,19 @@ function checkTeacher_(req) {
   if (pw.length < MIN_TEACHER_PW) {
     fail_('Apps Script 프로젝트 설정의 스크립트 속성에 TEACHER_PASSWORD(' + MIN_TEACHER_PW + '자 이상)를 넣어 주세요.');
   }
+  const given = String(req.tpw == null ? '' : req.tpw);
   const cache = CacheService.getScriptCache();
   const tries = Number(cache.get('tfail') || 0);
-  if (tries >= TEACHER_MAX_FAILS) fail_('교사 비밀번호를 여러 번 틀려 10분 동안 막았습니다. 잠시 뒤 다시 시도하세요.');
-  if (!same_(String(req.tpw == null ? '' : req.tpw), pw)) {
+  // 보조 비밀번호는 막는 중에도 통과한다(누군가 일부러 틀려 교사 화면을 막는 장난 대비)
+  const pw2 = String(PropertiesService.getScriptProperties().getProperty('TEACHER_PASSWORD2') || '');
+  if (pw2.length >= MIN_TEACHER_PW && same_(given, pw2)) { if (tries) cache.remove('tfail'); return; }
+  if (tries >= TEACHER_MAX_FAILS) fail_('교사 비밀번호를 여러 번 틀려 10분 동안 막았습니다. 보조 비밀번호(TEACHER_PASSWORD2)가 있으면 그것으로 들어오세요.');
+  if (!same_(given, pw)) {
     cache.put('tfail', String(tries + 1), 600);
     Utilities.sleep(800);
     fail_('교사 비밀번호가 다릅니다.');
   }
+  if (tries) cache.remove('tfail');           // 맞게 들어오면 틀린 횟수를 지운다
 }
 
 // 글자를 끝까지 비교해 맞힌 글자 수로 시간이 달라지지 않게 한다

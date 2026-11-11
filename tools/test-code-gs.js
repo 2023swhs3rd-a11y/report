@@ -33,7 +33,7 @@ const ctx = {
   LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
   ContentService: { MimeType: { JSON: 'json' }, createTextOutput: s => ({ s, setMimeType() { return this; } }) },
   PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] ?? null }) },
-  CacheService: { getScriptCache: () => ({ get: k => cache[k] ?? null, put: (k, v) => { cache[k] = v; } }) },
+  CacheService: { getScriptCache: () => ({ get: k => cache[k] ?? null, put: (k, v) => { cache[k] = v; }, remove: k => { delete cache[k]; } }) },
   Logger: { log() {} }, Date,
   Utilities: { DigestAlgorithm: { SHA_256: 1 }, Charset: { UTF_8: 1 }, sleep() {},
     computeDigest: (a, s) => Array.from(crypto.createHash('sha256').update(s, 'utf8').digest()).map(b => b > 127 ? b - 256 : b),
@@ -87,7 +87,20 @@ t('전체 초기화', r.ok && r.removed === 1 && D().getLastRow() === 2, JSON.st
 t('초기화 뒤 다시 등록', post({ action: 'login', id: '10312', name: '김하늘', pin: '1234' }).ok);
 for (let i = 0; i < 8; i++) post({ action: 'teacher_list', tpw: 'wrong' + i });
 t('교사 시도 제한', /10분 동안 막/.test(post({ action: 'teacher_list', tpw: TP }).error));
-delete cache.tfail;
+props.TEACHER_PASSWORD2 = 'backup-pass-456';
+t('막혀도 보조 비밀번호는 통과', post({ action: 'teacher_list', tpw: 'backup-pass-456' }).ok && !cache.tfail);
+cache.tfail = '3';
+t('맞게 들어오면 틀린 횟수 지움', post({ action: 'teacher_list', tpw: TP }).ok && !cache.tfail);
+r = post({ action: 'teacher_list', tpw: TP });
+t('목록에 반·명단·잠금 정보', r.classes && r.total === 1 && r.roster === 0 && r.lockMinutes === 5 && r.maxFails === 10, JSON.stringify(r).slice(0, 200));
+post({ action: 'login', id: '10401', name: '박별', pin: '1234' });
+r = post({ action: 'teacher_list', tpw: TP, cls: '104' });
+t('반 단위 목록', r.ok && r.rows.length === 1 && r.rows[0].id === '10401' && r.classes['103'] === 1 && r.classes['104'] === 1, JSON.stringify(r.rows.map(x => x.id)));
+ctx.LIST_ALL_MAX = 1;
+r = post({ action: 'teacher_list', tpw: TP });
+t('학생이 많으면 반을 고를 때까지 목록 안 보냄', r.ok && r.partial && r.rows.length === 0 && r.total === 2);
+t('전체 요청하면 모두 보냄', post({ action: 'teacher_list', tpw: TP, all: true }).rows.length === 2);
+ctx.LIST_ALL_MAX = 120;
 ss.sheets['명단'].getRange(2, 1, 1, 2).setValues([['10313', '이 나무']]);
 t('명단 밖 거부', /명단/.test(post({ action: 'login', id: '10314', name: '최구름', pin: '1234' }).error));
 t('명단 안 허용', post({ action: 'login', id: '10313', name: '이나무', pin: '1234' }).ok);
