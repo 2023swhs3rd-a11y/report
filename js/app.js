@@ -270,8 +270,8 @@ function fieldEl(f) {
       inp.value = withJosa(t, w); set(inp.value); inp.focus();
     } });
   }));
-  const tag = f.req ? h("span", { class: "req", text: "필수" }) : f.challenge ? h("span", { class: "req ch", text: "🚀 도전" }) : null;
-  return h("div", { class: f.challenge ? "fwrap challenge" : "fwrap" },
+  const tag = f.req ? h("span", { class: "req", text: "필수" }) : f.challenge ? h("span", { class: "req ch", text: "🚀 도전" }) : f.link ? h("span", { class: "req lk", text: "🔗 연결" }) : null;
+  return h("div", { class: "fwrap" + (f.challenge ? " challenge" : "") + (f.link ? " linked" : "") },
     f.kind === "select" ? h("p", { class: "fl" }, f.label, tag) : h("label", { class: "fl", for: idv }, f.label, tag),
     f.hint ? h("p", { class: "hint", text: f.hint }) : null,
     f.ph ? h("div", null, h("span", { class: "tpl", text: f.ph })) : null,
@@ -480,6 +480,14 @@ function collegeBox(open) {
       h("a", { href: "/jinhak/", text: "진로진학부 추천 자료의 대학별 가이드북 →" }), " · ",
       h("a", { href: "https://snuarori.snu.ac.kr", target: "_blank", rel: "noopener", text: "서울대 웹진 아로리 ↗" })));
 }
+function linkHead() {
+  return h("div", { class: "linkhead" },
+    h("h4", null, h("i", { class: "ico", "aria-hidden": "true", text: "🔗" }), "이전 활동과 이어 보기", h("span", { class: "req lk", text: "선택 · 강력 추천" })),
+    h("p", { text: "대학은 활동 하나보다 관심이 이어지는 흐름을 봐요. 예전 수업, 특강, 동아리, 독서에서 생긴 궁금증을 이번 탐구로 풀었다면 꼭 적어 두세요. 다른 과목에서 배운 개념과 이어 설명하면 더 좋아요." }),
+    h("div", { class: "lkex" },
+      h("p", null, h("b", { text: "이렇게 이어져요 " }), "~에 관심이 있어서 ~ 특강을 들었는데, 해결되지 않았던 궁금증을 이번에 알아보았다."),
+      h("p", null, h("b", { text: "이렇게도 이어져요 " }), "○○ 과목 시간에 조사했던 ○○ 문제를 다른 과목의 ○○ 개념과 연결해 탐구해 보았다.")));
+}
 function blockEl(b) {
   if (b.t === "guide") return h("div", { class: "note" }, h("h4", null, h("i", { class: "ico", "aria-hidden": "true", text: b.title === "가이드" ? "🧭" : "📌" }), b.title), h("ul", null, b.items.map(function (x) { return h("li", { text: x }); })));
   if (b.t === "ex") return h("div", { class: "ex" }, h("h4", null, h("i", { class: "ico", "aria-hidden": "true", text: "👀" }), b.title), b.lines.map(function (l) { return h("p", null, l[0] ? h("b", { text: l[0] + "  " }) : null, l[1]); }));
@@ -495,6 +503,7 @@ function blockEl(b) {
   }
   if (b.t === "ref") return refBlock();
   if (b.t === "people") return peopleBox();
+  if (b.t === "link") return linkHead();
   if (b.t === "links") return linksBox(b.compact);
   if (b.t === "bloom") return bloomBox();
   if (b.t === "college") return collegeBox(true);
@@ -736,7 +745,8 @@ function detailPanel(r) {
     h("div", { style: "margin:16px 0 4px" }, save),
     answersView(r));
 }
-const SUM = [["관심 진로", "career"], ["질문", "question"], ["고른 이유", "reason"], ["찾은 답", "r2"], ["근거 1", "r3"], ["근거 2", "r4"], ["처음 예상과 비교", "r5"], ["내 생각", "r6"],
+const SUM = [["관심 진로", "career"], ["질문", "question"], ["고른 이유", "reason"],
+  ["🔗 이어진 활동", "lk_type"], ["🔗 그 활동에서 한 일", "lk_what"], ["🔗 남은 궁금증·이어진 점", "lk_q"], ["🔗 다른 과목 개념 연결", "lk_sub"], ["찾은 답", "r2"], ["근거 1", "r3"], ["근거 2", "r4"], ["처음 예상과 비교", "r5"], ["내 생각", "r6"],
   ["달라진 생각", "v2"], ["관련 학과·직업", "v4"], ["더 배우고 싶은 과목", "v5"], ["다음 질문", "v6"], ["도전: 다른 의견·한계", "r8"], ["도전: 다음 탐구 계획", "v7"], ["관찰 메모", "t_memo"], ["특기사항 초안", "t_note"]];
 function rubText(r) { return RUBRIC.map(function (x) { return filled(r[x[0]]) ? x[1] + " " + r[x[0]] : ""; }).filter(Boolean).join(" · "); }
 function noteView(sm) {
