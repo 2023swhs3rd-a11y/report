@@ -18,7 +18,7 @@
 | `js/samples.js` | 교사 화면 '📚 완성 예시'의 예시 학생 2명과 특기사항 예시 |
 | `js/app.js` | 화면 동작(학생·둘러보기·교사·인쇄) |
 | `css/app.css` | 모양 |
-| `img/` | 탐구 지도 그림(`map.svg`), 완성 그림(`done.svg`), 파비콘(`favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`) |
+| `img/` | 탐구 지도 그림(`map.svg`), 완성 그림(`done.svg`), 파비콘(접힌 지도와 위치 핀: `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`) |
 | `og.png` | 카톡·SNS로 주소를 보낼 때 뜨는 미리보기 이미지(1200×630). 원본은 `tools/og/og.html`, 다시 만들 때는 `node tools/render-og.js` 후 `index.html`의 `og.png?v=` 숫자를 올림 |
 | `apps-script/Code.gs` | 구글 시트에 저장하는 스크립트. **비밀번호가 들어 있지 않아** 저장소에 두어도 안전 |
 | `apps-script/Code.template.gs` | `Code.gs`의 원본(시트 열 목록만 비어 있음) |

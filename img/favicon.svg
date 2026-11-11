@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="탐구 보고서">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="탐구 지도">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#f59e0b"/>
@@ -6,10 +6,14 @@
     </linearGradient>
   </defs>
   <rect width="64" height="64" rx="15" fill="url(#g)"/>
-  <path d="M40.5 40.5 L53 53" stroke="#7c2d12" stroke-width="9" stroke-linecap="round" opacity=".35"/>
-  <path d="M39.5 39.5 L52 52" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
-  <circle cx="27" cy="27" r="16" fill="#fff"/>
-  <circle cx="27" cy="27" r="16" fill="none" stroke="#fff" stroke-width="5"/>
-  <path d="M21.2 22.6 a6 6 0 1 1 8.6 5.4 c-1.9 1 -2.8 2.1 -2.8 4.2 v0.6" fill="none" stroke="#c2410c" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="27" cy="37.6" r="2.6" fill="#c2410c"/>
+  <!-- 세 칸으로 접힌 지도 -->
+  <path d="M8 17 L23 12 L23 52 L8 57 Z" fill="#ffffff"/>
+  <path d="M23 12 L41 18 L41 58 L23 52 Z" fill="#fde2b8"/>
+  <path d="M41 18 L56 13 L56 53 L41 58 Z" fill="#ffffff"/>
+  <!-- 점선 길 -->
+  <path d="M14 46 C 20 44, 22 38, 29 37 S 38 33, 43 28" fill="none" stroke="#c2410c" stroke-width="4.4" stroke-linecap="round" stroke-dasharray="0.1 6.4"/>
+  <circle cx="14" cy="46" r="3.4" fill="#c2410c"/>
+  <!-- 위치 핀 -->
+  <path d="M45 9 c-5.8 0 -9.6 4.3 -9.6 9.3 c0 6.8 9.6 15.2 9.6 15.2 s9.6 -8.4 9.6 -15.2 c0 -5 -3.8 -9.3 -9.6 -9.3 z" fill="#e11d48" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"/>
+  <circle cx="45" cy="18.4" r="3.6" fill="#ffffff"/>
 </svg>
