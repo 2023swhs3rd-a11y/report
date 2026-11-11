@@ -116,7 +116,7 @@ function demoApi(req) {
 function answersView(d) {
   const box = h("div", { class: "view" });
   STAGES.forEach(function (st) {
-    box.append(h("h3", { class: "c-" + st.id }, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), st.badge + " · " + st.title, h("small", { text: filled(d[st.id]) ? "저장 " + d[st.id] : "저장 전" })));
+    box.append(h("h3", { class: "c-" + st.id }, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), st.badge + " " + st.nick + " · " + st.title, h("small", { text: filled(d[st.id]) ? "저장 " + d[st.id] : "저장 전" })));
     const dl = h("dl", { class: "c-" + st.id });
     const add = function (f, pre) {
       dl.append(h("dt", { text: (pre ? pre + " · " : "") + f.label }), h("dd", { class: filled(d[f.key]) ? "" : "empty", text: filled(d[f.key]) ? String(d[f.key]) : "—" }));
@@ -200,30 +200,103 @@ function renderLogin() {
         kindLegend(),
         h("ol", { class: "flow" }, STAGES.map(function (st) {
           return h("li", { class: "c-" + st.id + " " + kcls(st) }, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }),
-            h("b", null, h("span", { class: "kpill", text: st.kind === "과제" ? "🏠 과제" : "🏫 수업" }), st.badge + " · " + st.title), h("span", { text: st.goal + " · " + st.time }));
+            h("b", null, h("span", { class: "kpill", text: st.kind === "과제" ? "🏠 과제" : "🏫 수업" }), st.badge + " · " + st.nick), h("span", { text: st.title + " — " + st.goal + " · " + st.time }));
         }))),
       form),
     h("div", { style: "margin-top:16px" }, collegeBox(false)));
 }
+/* 드롭다운 대신 눌러서 고르는 버튼 묶음. 같은 버튼을 다시 누르면 선택이 풀린다 */
+const SEG_EMO = { "잘함": "🌟", "보통": "🙂", "노력 필요": "💪" };
+function segEl(opts, val, onPick, label) {
+  const box = h("div", { class: "seg", role: "radiogroup", "aria-label": label });
+  box.dataset.v = val || "";
+  const sync = function () {
+    box.querySelectorAll("button").forEach(function (b) {
+      const on = b.dataset.v === box.dataset.v;
+      b.classList.toggle("on", on); b.setAttribute("aria-checked", on ? "true" : "false");
+    });
+  };
+  opts.forEach(function (o) {
+    const b = h("button", { type: "button", role: "radio", text: (SEG_EMO[o] ? SEG_EMO[o] + " " : "") + o, onclick: function () {
+      box.dataset.v = box.dataset.v === o ? "" : o; sync(); onPick(box.dataset.v);
+    } });
+    b.dataset.v = o; box.append(b);
+  });
+  sync();
+  return box;
+}
+/* 단어 끝 글자에 받침이 있으면 은·을·과, 없으면 는·를·와를 고른다(한글이 아니면 두 가지를 다 둔다) */
+function withJosa(t, w) {
+  return t.replace(/\{w\}(은\(는\)|을\(를\)|와\(과\))/, function (m, pair) {
+    const c = w.charCodeAt(w.length - 1);
+    if (w === "~" || c < 0xAC00 || c > 0xD7A3) return w + pair;
+    const has = (c - 0xAC00) % 28 > 0;
+    const a = pair.slice(0, 1), b = pair.slice(2, 3);   // 예: "은(는)" → 은, 는
+    return w + (has ? (a === "와" ? "과" : a) : (a === "와" ? "와" : b));
+  });
+}
+const QTPL_LABEL = ["왜 ~일까?", "어떤 영향을 줄까?", "무엇이 다를까?", "줄이려면(늘리려면)?", "앞으로 어떻게?"];
 function fieldEl(f) {
   const idv = "f_" + f.key;
   let inp;
   const val = S.data[f.key] == null ? "" : String(S.data[f.key]);
-  if (f.kind === "area") { inp = h("textarea", { id: idv, rows: f.rows || 3, maxlength: "3000" }); inp.value = val; }
-  else if (f.kind === "select") {
-    inp = h("select", { id: idv }, h("option", { value: "", text: "고르기" }), f.opts.map(function (o) { return h("option", { value: o, text: o }); }));
+  const set = function (v) { S.data[f.key] = v; markDirty(); };
+  if (f.kind === "select") inp = segEl(f.opts, val, set, f.label);
+  else {
+    if (f.kind === "area") inp = h("textarea", { id: idv, rows: f.rows || 3, maxlength: "3000" });
+    else inp = h("input", { type: "text", id: idv, maxlength: "300" });
     inp.value = val;
-  } else { inp = h("input", { type: "text", id: idv, maxlength: "300" }); inp.value = val; }
-  const on = function () { S.data[f.key] = inp.value; markDirty(); };
-  inp.addEventListener("input", on); inp.addEventListener("change", on);
-  return h("div", null,
-    h("label", { class: "fl", for: idv }, f.label, f.req ? h("span", { class: "req", text: "필수" }) : null),
+    const on = function () { set(inp.value); };
+    inp.addEventListener("input", on); inp.addEventListener("change", on);
+  }
+  let helper = null;
+  if (f.chips) helper = h("div", { class: "pick" }, h("span", { class: "plabel", text: "막히면 골라 봐요" }), f.chips.map(function (c) {
+    return h("button", { type: "button", text: "+ " + c, onclick: function () {
+      const parts = inp.value.split(",").map(function (x) { return x.trim(); }).filter(Boolean);
+      if (parts.indexOf(c) < 0) parts.push(c);
+      inp.value = parts.join(", "); set(inp.value); inp.focus();
+    } });
+  }));
+  if (f.qtpl) helper = h("div", { class: "pick" }, h("span", { class: "plabel", text: "질문 틀 넣기" }), QTPL.map(function (t, k) {
+    return h("button", { type: "button", text: QTPL_LABEL[k], onclick: function () {
+      const w = filled(S.data.word) ? String(S.data.word).trim() : "~";
+      if (filled(inp.value) && !confirm("지금 쓴 질문을 이 틀로 바꿀까요?")) return;
+      inp.value = withJosa(t, w); set(inp.value); inp.focus();
+    } });
+  }));
+  const tag = f.req ? h("span", { class: "req", text: "필수" }) : f.challenge ? h("span", { class: "req ch", text: "🚀 도전" }) : null;
+  return h("div", { class: f.challenge ? "fwrap challenge" : "fwrap" },
+    f.kind === "select" ? h("p", { class: "fl" }, f.label, tag) : h("label", { class: "fl", for: idv }, f.label, tag),
     f.hint ? h("p", { class: "hint", text: f.hint }) : null,
     f.ph ? h("div", null, h("span", { class: "tpl", text: f.ph })) : null,
     exBox(f),
-    inp);
+    inp, helper);
+}
+/* 이 단계의 필수 칸과 도전 과제 */
+function reqItems(st) {
+  const out = [];
+  st.blocks.forEach(function (b) {
+    if (b.t === "f" && b.req) out.push([b.key, b.label]);
+    else if (b.t === "card") b.fields.forEach(function (f) { if (f.req) out.push([f.key, b.title.split(" · ")[0].replace("자료 카드 ", "카드 ") + " " + f.label]); });
+  });
+  return out;
+}
+function levelsBox(st) {
+  const items = reqItems(st);
+  return h("div", { class: "levels" },
+    h("div", { class: "lv base" }, h("b", { text: "🌱 이것만 하면 완성" }), h("span", { class: "lcnt", id: "reqcnt" }),
+      h("ul", { id: "reqlist" }, items.map(function (x) { return h("li", { "data-k": x[0], text: x[1] }); }))),
+    st.more ? h("div", { class: "lv more" }, h("b", { text: "🚀 더 해 보고 싶다면" }),
+      h("ul", null, st.more.map(function (m) { return h("li", { text: m }); }))) : null);
+}
+function updReq() {
+  const ul = document.getElementById("reqlist"); if (!ul) return;
+  let n = 0, all = 0;
+  ul.querySelectorAll("li").forEach(function (li) { const ok = filled(S.data[li.dataset.k]); li.classList.toggle("ok", ok); all++; if (ok) n++; });
+  const c = document.getElementById("reqcnt"); if (c) c.textContent = n + " / " + all + (n === all ? " · 저장하면 완성! 🎉" : "");
 }
 function markDirty() {
+  updReq();
   if (S.browse || !S.id) return;
   S.dirty = true;
   store("bum_draft_" + S.id, { cur: S.cur, data: stageData(S.cur), at: Date.now() });
@@ -256,7 +329,7 @@ function doneCount() { return STAGES.filter(function (st) { return stageStatus(S
 function celebrate(st) {
   const all = doneCount() === STAGES.length;
   const i = STAGES.indexOf(st), next = STAGES[i + 1];
-  toast(all ? "🏆 다섯 정거장을 모두 지났어요! 보고서 완성!" : "🎉 " + st.badge + " 완료!" + (next ? " 다음은 " + next.badge + " " + LOOK[next.id] : ""));
+  toast(all ? "🏆 다섯 정거장을 모두 지났어요! 보고서 완성!" : "🎉 " + st.badge + " '" + st.nick + "' 완료!" + (next ? " 다음은 " + next.badge + " '" + next.nick + "' " + LOOK[next.id] : ""));
   if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const colors = ["#f59e0b", "#0ea5e9", "#22c55e", "#ec4899", "#8b5cf6", "#facc15"];
   const box = h("div", { class: "confetti", "aria-hidden": "true" });
@@ -284,8 +357,8 @@ function renderNav() {
   put(nav, STAGES.map(function (st) {
     const n = stageStatus(S.data, st), s = STATUS[n];
     return h("button", { type: "button", class: "c-" + st.id + " s" + n + " " + kcls(st), "aria-current": st.id === S.cur ? "true" : null,
-      "aria-label": st.badge + "(" + st.kind + ") " + s[1], onclick: function () { goStage(st.id); } },
-      h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), h("b", { text: st.badge }), h("span", { text: (st.kind === "과제" ? "🏠 " : "🏫 ") + s[1] }));
+      "aria-label": st.badge + " " + st.nick + "(" + st.kind + ") " + s[1], onclick: function () { goStage(st.id); } },
+      h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), h("b", { text: st.nick }), h("span", { text: st.badge + " · " + s[1] }));
   }));
   const pr = document.getElementById("prog");
   if (pr) {
@@ -444,16 +517,17 @@ function renderStudent() {
     h("div", { class: "panel stage c-" + st.id + " " + kcls(st) },
       h("div", { class: "shead" },
         h("span", { class: "big", "aria-hidden": "true", text: LOOK[st.id] }),
-        h("span", { class: "tag" + (st.kind === "과제" ? " hw" : ""), text: st.kind === "과제" ? "🏠 " + st.badge + " · 집에서 해 와요" : "🏫 " + st.badge + " · 수업 시간" }),
+        h("span", { class: "tag" + (st.kind === "과제" ? " hw" : ""), text: (st.kind === "과제" ? "🏠 " : "🏫 ") + st.badge + " · " + st.nick }),
         h("h2", { text: st.title }),
         h("p", null, h("b", { text: "🎯 목표 " }), st.goal + "  ·  ⏱ " + st.time),
         h("div", { class: "kband" }, st.kind === "과제"
           ? [h("b", { text: "🏠 집에서 해 오는 과제예요." }), " 다음 수업 전까지 이 단계를 채우고 💾 저장해요. 학교 컴퓨터실이나 휴대폰으로 해도 돼요."]
           : [h("b", { text: "🏫 수업 시간에 하는 단계예요." }), " 선생님 안내에 맞춰 함께 쓰고, 끝나기 전에 💾 저장해요."])),
       teacherNote(st),
+      levelsBox(st),
       st.blocks.map(blockEl)),
     h("div", { id: "bar", class: "bar noprint" }));
-  renderNav(); renderBar();
+  renderNav(); renderBar(); updReq();
 }
 /* ---------- 인쇄: 머리말(제목·학생)·꼬리말(출력 일시·쪽수)은 @page 여백 칸에 넣는다 ---------- */
 let PRINT_WHO = "";
@@ -537,16 +611,19 @@ function renderTeacherLogin() {
   document.body.classList.remove("has-bar");
   $app.className = "wrap";
   const pw = h("input", { type: "password", id: "tpw", autocomplete: "off" });
-  const go = h("button", { class: "btn", type: "submit", text: "들어가기" });
-  put($app, 
-    h("div", { class: "top" }, h("h1", { text: "탐구 보고서 · 선생님용" })),
+  const go = h("button", { class: "btn", type: "submit", style: "width:100%", text: "들어가기" });
+  put($app,
+    h("div", { class: "tlogin" },
+    h("div", { class: "lock", "aria-hidden": "true", text: "🔐" }),
+    h("h1", { text: "탐구 보고서 · 선생님용" }),
+    h("p", { class: "hint", text: "제출 현황, 확인·피드백, 평가 기록, 완성 예시, 백업·초기화를 다루는 화면이에요." }),
     DEMO ? h("div", { class: "demo" }, h("b", { text: "미리보기 모드 " }), "교사 비밀번호는 demo 입니다. 이 기기에서 학생 화면으로 입력한 내용만 보입니다.") : null,
-    h("form", { class: "panel", style: "max-width:440px", onsubmit: async function (ev) {
+    h("form", { class: "panel", onsubmit: async function (ev) {
       ev.preventDefault(); go.disabled = true;
       try { T.pw = pw.value; await loadRows(); touchTeacher(); renderTeacher(); }
       catch (e) { T.pw = ""; toast(e.message, true); go.disabled = false; }
     } }, h("label", { class: "fl", for: "tpw", text: "교사 비밀번호" }), pw, h("div", { style: "margin-top:16px" }, go)),
-    null);
+    h("p", { class: "hint", style: "margin-top:12px", text: "학생 앞에서 비밀번호를 입력하지 마세요. 30분 동안 쓰지 않으면 자동으로 로그아웃돼요." })));
 }
 async function loadRows() {
   const out = await api({ action: "teacher_list", tpw: T.pw });
@@ -593,7 +670,7 @@ function statusTab() {
     h("div", { class: "panel" },
       h("div", { class: "tblwrap" }, h("table", { class: "st" },
         h("thead", null, h("tr", null, h("th", { class: "l", text: "학번" }), h("th", { class: "l", text: "이름" }),
-          STAGES.map(function (st, i) { return h("th", null, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), st.badge + " (" + done[i] + "/" + rows.length + ")"); }),
+          STAGES.map(function (st, i) { return h("th", null, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), st.nick, h("br"), st.badge + " (" + done[i] + "/" + rows.length + ")"); }),
           h("th", { text: "확인①" }), h("th", { text: "확인②" }), h("th", { text: "확인③" }), h("th", { class: "l", text: "탐구 질문" }))),
         tb)),
       h("p", { class: "legend", text: "● 완료: 저장했고 필수 칸을 모두 채움 · ◐ 작성 중 · ○ 아직.  학생 줄을 누르면 아래에 보고서와 확인·피드백 칸이 열립니다." })));
@@ -615,8 +692,8 @@ function detailPanel(r) {
   const right = h("div", null, h("p", { class: "sub", style: "margin-top:14px", text: "평가 기준표 · 학생에게 보이지 않음" }));
   const rub = h("div", { class: "rub" });
   RUBRIC.forEach(function (x) {
-    const s = h("select", { "aria-label": x[1] }, h("option", { value: "", text: "—" }), LEVELS.map(function (o) { return h("option", { value: o, text: o }); }));
-    s.value = r[x[0]] || ""; inputs[x[0]] = function () { return s.value; };
+    const s = segEl(LEVELS, r[x[0]] || "", function () {}, x[1]);
+    inputs[x[0]] = function () { return s.dataset.v; };
     rub.append(h("span", { text: x[1] }), s);
   });
   const memo = h("textarea", { rows: 4, maxlength: "1500", id: "tmemo" }); memo.value = r.t_memo || "";
@@ -650,7 +727,7 @@ function detailPanel(r) {
     answersView(r));
 }
 const SUM = [["관심 진로", "career"], ["질문", "question"], ["고른 이유", "reason"], ["찾은 답", "r2"], ["근거 1", "r3"], ["근거 2", "r4"], ["처음 예상과 비교", "r5"], ["내 생각", "r6"],
-  ["달라진 생각", "v2"], ["관련 학과·직업", "v4"], ["더 배우고 싶은 과목", "v5"], ["다음 질문", "v6"], ["관찰 메모", "t_memo"], ["특기사항 초안", "t_note"]];
+  ["달라진 생각", "v2"], ["관련 학과·직업", "v4"], ["더 배우고 싶은 과목", "v5"], ["다음 질문", "v6"], ["도전: 다른 의견·한계", "r8"], ["도전: 다음 탐구 계획", "v7"], ["관찰 메모", "t_memo"], ["특기사항 초안", "t_note"]];
 function rubText(r) { return RUBRIC.map(function (x) { return filled(r[x[0]]) ? x[1] + " " + r[x[0]] : ""; }).filter(Boolean).join(" · "); }
 function noteView(sm) {
   const total = sm.note.map(function (x) { return x[0]; }).join("").length;

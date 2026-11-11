@@ -126,7 +126,7 @@ body.is-wide #foot { max-width: 1160px; }
 .btn:disabled { opacity: .55; cursor: default; filter: none; }
 
 /* 입력칸 */
-label.fl { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text); margin: 20px 0 5px; font-size: .98rem; }
+.fl { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--text); margin: 20px 0 5px; font-size: .98rem; }
 .req { font-size: .72rem; font-weight: 800; color: var(--ci, var(--acc)); background: var(--cb, var(--acc-soft)); border-radius: 999px; padding: 1px 8px; }
 .hint { color: var(--muted); font-size: .88rem; margin: 0 0 6px; }
 .tpl { display: inline-flex; gap: 6px; font-size: .88rem; color: var(--text); background: var(--cb, var(--soft)); border-radius: 10px; padding: 4px 10px; margin: 0 0 6px; }
@@ -338,6 +338,47 @@ body.has-bar { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 .bloom .hint a, .college .hint a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; margin: 4px 4px 0 0; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--card); text-decoration: none; font-weight: 700; }
 .chk input[type=checkbox] { width: 24px; height: 24px; }
 .linkbtn { min-height: 32px; }
+
+/* ── 눌러서 고르는 버튼 묶음 ── */
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--line-strong); background: var(--card); color: var(--text); font-weight: 600; font-size: .92rem; cursor: pointer; }
+.seg button:hover { border-color: var(--c, var(--acc)); }
+.seg button.on { background: var(--c, var(--acc)); border-color: var(--c, var(--acc)); color: #fff; font-weight: 800; box-shadow: 0 2px 6px color-mix(in srgb, var(--c, var(--acc)) 35%, transparent); }
+@media (prefers-color-scheme: dark) { .seg button.on { color: #111; } }
+.rub .seg button { min-height: 36px; padding: 0 12px; font-size: .86rem; }
+
+/* ── 단어 고르기·질문 틀 버튼 ── */
+.pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.plabel { font-size: .8rem; font-weight: 700; color: var(--muted); margin-right: 2px; }
+.pick button { min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--c, var(--acc)) 55%, var(--line)); background: var(--cb, var(--soft)); color: var(--ci, var(--text)); font-size: .86rem; font-weight: 600; cursor: pointer; }
+.pick button:hover { border-style: solid; }
+
+/* ── 🌱 기본 완성 / 🚀 도전 ── */
+.levels { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin: 14px 0 4px; }
+.lv { border-radius: var(--radius-md); padding: 12px 14px; font-size: .9rem; }
+.lv b { color: var(--text); font-size: .95rem; }
+.lv ul { margin: 6px 0 0; padding: 0; list-style: none; }
+.lv li { position: relative; padding-left: 24px; margin: 4px 0; }
+.lv.base { background: color-mix(in srgb, var(--ok) 8%, var(--card)); border: 1.5px solid color-mix(in srgb, var(--ok) 30%, transparent); }
+.lv.base li::before { content: "○"; position: absolute; left: 2px; color: var(--muted); font-weight: 800; }
+.lv.base li.ok { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--ok) 60%, transparent); }
+.lv.base li.ok::before { content: "✓"; color: var(--ok); }
+.lcnt { margin-left: 8px; font-size: .84rem; font-weight: 800; color: var(--ok); }
+.lv.more { background: #f3f0ff; border: 1.5px dashed #b9a8f5; }
+.lv.more li::before { content: "★"; position: absolute; left: 3px; color: #8b5cf6; }
+@media (prefers-color-scheme: dark) { .lv.more { background: #1f1a35; border-color: #5b4ba0; } }
+@media (max-width: 640px) { .levels { grid-template-columns: 1fr; } }
+.req.ch { color: #6d28d9; background: #f3f0ff; }
+.fwrap.challenge { margin-top: 18px; padding: 2px 14px 14px; border-radius: var(--radius-md); background: #f8f6ff; border: 1.5px dashed #c4b5fd; }
+@media (prefers-color-scheme: dark) { .req.ch { color: #c4b5fd; background: #2a2245; } .fwrap.challenge { background: #1d1930; border-color: #5b4ba0; } }
+
+/* ── 교사 로그인: 가운데 ── */
+.tlogin { max-width: 440px; margin: 40px auto 0; text-align: center; }
+.tlogin .lock { font-size: 2.4rem; line-height: 1; }
+.tlogin h1 { margin: 10px 0 6px; font-size: 1.4rem; letter-spacing: -0.03em; }
+.tlogin .hint { text-align: center; }
+.tlogin form { text-align: left; margin-top: 16px; }
+.tlogin .demo { text-align: left; }
 
 /* 읽기 전용 보기 */
 .view h3 { font-size: 1.02rem; margin: 24px 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
