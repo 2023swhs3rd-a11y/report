@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif" viewBox="0 0 120 120" aria-hidden="true">
+<circle cx="60" cy="60" r="56" fill="#fef3c7"/>
+<path d="M38 30 H82 V48 C82 64 72 74 60 74 C48 74 38 64 38 48 Z" fill="#f59e0b"/>
+<path d="M38 36 H26 C26 52 34 58 42 58" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/>
+<path d="M82 36 H94 C94 52 86 58 78 58" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/>
+<rect x="54" y="72" width="12" height="14" fill="#d97706"/><rect x="42" y="86" width="36" height="10" rx="3" fill="#92400e"/>
+<path d="M60 38 L64 48 L74 48 L66 54 L69 64 L60 58 L51 64 L54 54 L46 48 L56 48 Z" fill="#fff7d6"/>
+<path transform="translate(22 22)" d="M0 -7 L2 -2 L7 0 L2 2 L0 7 L-2 2 L-7 0 L-2 -2 Z" fill="#ec4899"/>
+<path transform="translate(100 28) scale(.8)" d="M0 -7 L2 -2 L7 0 L2 2 L0 7 L-2 2 L-7 0 L-2 -2 Z" fill="#0ea5e9"/>
+<path transform="translate(96 96) scale(.7)" d="M0 -7 L2 -2 L7 0 L2 2 L0 7 L-2 2 L-7 0 L-2 -2 Z" fill="#22c55e"/>
+</svg>
