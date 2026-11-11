@@ -80,6 +80,13 @@ function demoApi(req) {
   const fail = function (m) { throw new Error(m); };
   const pub = function (r) { const o = {}; for (const k in r) if (k !== "pin" && k !== "t_memo" && k !== "t_note" && !/^t_r/.test(k)) o[k] = r[k]; return o; };
   let out;
+  if (req.action === "change_pin") {
+    const r = db.rows[req.id];
+    if (!r || r.pin !== req.pin) fail("비밀번호가 다릅니다.");
+    if (String(req.newpin).length < 4) fail("새 비밀번호는 4~12자로 정하세요.");
+    r.pin = req.newpin; store("bum_demo", db);
+    return Promise.resolve({ ok: true });
+  }
   if (req.action === "login" || req.action === "save") {
     let r = db.rows[req.id];
     if (!r) {
@@ -146,6 +153,20 @@ function startBrowse() {
   S.browse = true; S.id = ""; S.name = ""; S.pin = ""; S.data = {}; S.cur = "s1"; S.dirty = false;
   renderStudent(); window.scrollTo(0, 0);
 }
+/* 비밀번호 바꾸기: 처음 비밀번호(생년월일)는 친구가 알 수 있으므로 바꾸기를 권한다 */
+async function changePin() {
+  const a = prompt("새 비밀번호를 정해 주세요 (4~12자, 생년월일은 안 돼요)");
+  if (a == null) return;
+  if (a.length < 4 || a.length > 12) return toast("새 비밀번호는 4~12자로 정하세요.", true);
+  const b = prompt("확인을 위해 새 비밀번호를 한 번 더 써 주세요");
+  if (b == null) return;
+  if (a !== b) return toast("두 번 쓴 비밀번호가 달라요. 다시 해 주세요.", true);
+  try {
+    await api({ action: "change_pin", id: S.id, name: S.name, pin: S.pin, newpin: a });
+    S.pin = a; S.initial = false; renderStudent();
+    toast("🔑 비밀번호를 바꿨어요. 다음부터는 새 비밀번호로 들어와요.");
+  } catch (e) { toast(e.message, true); }
+}
 function goHome() { leaveStudent(); window.scrollTo(0, 0); }
 function goLogin() {
   leaveStudent();
@@ -177,11 +198,11 @@ function renderLogin() {
     const v = { id: id.value.trim(), name: name.value.trim(), pin: pin.value };
     if (!/^\d{4,5}$/.test(v.id)) return toast("학번은 숫자 4~5자리로 입력하세요.", true);
     if (!v.name) return toast("이름을 입력하세요.", true);
-    if (v.pin.length < 4) return toast("비밀번호는 4자 이상으로 정하세요.", true);
+    if (v.pin.length < 3) return toast("비밀번호를 확인하세요. 생년월일이면 0310처럼 4자리로 써요.", true);
     go.disabled = true; go.textContent = "확인하는 중…";
     try {
       const out = await api({ action: "login", id: v.id, name: v.name, pin: v.pin });
-      S.id = v.id; S.name = v.name; S.pin = v.pin; S.data = out.data || {};
+      S.id = v.id; S.name = v.name; S.pin = v.pin; S.data = out.data || {}; S.initial = !!out.initial;
       let draft = store("bum_draft_" + S.id);
       if (draft && !(draft.at > Date.now() - 3 * 86400000)) { store("bum_draft_" + S.id, null); draft = null; }   // 3일 지난 임시 저장은 버린다
       S.browse = false;
@@ -190,6 +211,7 @@ function renderLogin() {
       const pend = pendGet();
       if (pend) Object.keys(pend).forEach(function (k) { if (/^s\d$/.test(k)) Object.assign(S.data, pend[k]); });
       renderStudent(); window.scrollTo(0, 0);
+      if (S.initial) setTimeout(function () { toast("🔑 처음 비밀번호(생년월일)는 친구도 알 수 있어요. 위의 '비밀번호 바꾸기'로 나만 아는 비밀번호로 바꿔 두세요."); }, 2500);
       if (pend) flushPending();
       else if (draft && draft.data) toast("저장하지 않은 내용을 불러왔습니다. 1분 뒤 자동으로 저장되고, 💾를 눌러 바로 저장해도 돼요.");
       if (draft && draft.data) scheduleAuto();
@@ -199,7 +221,7 @@ function renderLogin() {
     h("label", { class: "fl", for: "lid", text: "학번" }), id,
     h("label", { class: "fl", for: "lname", text: "이름" }), name,
     h("label", { class: "fl", for: "lpin", text: "비밀번호" }),
-    h("p", { class: "hint", text: "처음이면 내가 쓸 비밀번호를 정해서 넣어요(4자 이상). 다음부터는 같은 비밀번호로 들어와요. 다른 사이트에서 쓰는 비밀번호는 쓰지 마세요." }), pin,
+    h("p", { class: "hint", text: "처음 비밀번호는 생년월일 4자리(월일)예요. 예: 3월 10일 → 0310. 들어온 뒤 '🔑 비밀번호 바꾸기'로 나만 아는 비밀번호로 바꿀 수 있어요. 선생님이 생년월일을 정해 두지 않았다면 처음 들어올 때 내가 쓸 비밀번호(4자 이상)를 정해요." }), pin,
     h("div", { style: "margin-top:20px" }, go),
     h("button", { class: "btn ghost", type: "button", style: "width:100%; margin-top:8px", text: "👀 먼저 둘러볼래요 (저장 안 됨)", onclick: startBrowse }),
     h("p", { class: "hint", style: "margin:12px 0 0", text: "비밀번호를 잊었으면 선생님께 초기화를 부탁하세요. 쓰던 내용은 지워지지 않아요." }));
@@ -593,6 +615,7 @@ function renderStudent() {
       S.browse ? h("span", { class: "who browse", text: "👀 둘러보기 중" }) : h("span", { class: "who", text: "🙂 " + S.id + " " + S.name }),
       h("button", { class: "btn ghost small", type: "button", text: "전체 보기·인쇄", onclick: async function () { if (S.dirty && !(await saveStage(true))) return; renderAll(); } }),
       S.browse ? h("button", { class: "btn ghost small", type: "button", text: "🏠 처음 화면으로", onclick: goHome }) : null,
+      S.browse ? null : h("button", { class: "btn small" + (S.initial ? "" : " ghost"), type: "button", text: "🔑 비밀번호 바꾸기", onclick: changePin }),
       h("button", { class: "btn ghost small", type: "button", text: S.browse ? "🔑 로그인" : "나가기", onclick: function () {
         if (S.browse) return goLogin();
         if (S.dirty && !confirm("저장하지 않은 내용은 지워집니다. 그래도 나갈까요?")) return;
@@ -843,8 +866,8 @@ function detailPanel(r) {
     catch (e) { toast(e.message, true); save.disabled = false; }
   } });
   const reset = h("button", { class: "btn danger small", type: "button", text: "학생 비밀번호 초기화", onclick: async function () {
-    if (!confirm(r.name + " 학생의 비밀번호를 초기화할까요? 학생이 다음에 들어올 때 새 비밀번호를 정합니다. 보고서 내용은 그대로입니다.")) return;
-    try { await api({ action: "teacher_reset", tpw: T.pw, id: r.id }); toast("초기화했습니다. 학생에게 새 비밀번호로 들어오라고 알려 주세요."); }
+    if (!confirm(r.name + " 학생의 비밀번호를 초기화할까요? 명단에 생년월일이 있으면 생년월일(월일 4자리)로 다시 들어오고, 없으면 학생이 다음에 들어올 때 새 비밀번호를 정합니다. 보고서 내용은 그대로입니다.")) return;
+    try { await api({ action: "teacher_reset", tpw: T.pw, id: r.id }); toast("초기화했습니다. 학생에게 생년월일 4자리(명단에 있으면)로 들어와 비밀번호를 바꾸라고 알려 주세요."); }
     catch (e) { toast(e.message, true); }
   } });
   return h("div", { class: "panel", id: "detail" },
@@ -926,7 +949,7 @@ function adminTab() {
       h("ul", { class: "checklist" },
         h("li", { text: "교사 비밀번호는 Apps Script '스크립트 속성'의 TEACHER_PASSWORD에 10자 이상으로 둡니다. 코드에는 쓰지 않습니다." }),
         h("li", { text: "구글 시트는 다른 사람과 공유하지 않습니다. 웹 앱만 '모든 사용자'로 엽니다." }),
-        h("li", { text: "'명단' 시트에 학번과 이름을 넣어 두면 명단에 있는 학생만 들어올 수 있습니다." }),
+        h("li", { text: "'명단' 시트에 학번(A)·이름(B)·생년월일 월일 4자리(C)를 넣어 두면 명단에 있는 학생만, 생년월일을 처음 비밀번호로 들어올 수 있습니다. 310처럼 3자리로 바뀌어도 0310으로 맞춰 봅니다." }),
         h("li", { text: "학생이 비밀번호를 10번 틀리면 " + (T.meta.lockMinutes || 5) + "분 동안 잠기고(현황표에 🔒 표시), 학생 줄의 '학생 비밀번호 초기화'로 바로 풀 수 있습니다." }),
         h("li", { text: "교사 비밀번호를 10분 안에 8번 틀리면 10분 동안 교사 화면이 막힙니다. 누가 일부러 막아도 들어올 수 있게 스크립트 속성에 보조 비밀번호 TEACHER_PASSWORD2(10자 이상)를 따로 넣어 두세요." }),
         h("li", { text: "선생님 화면은 30분 동안 쓰지 않으면 저절로 로그아웃됩니다. 공용 컴퓨터에서는 다 쓰고 '로그아웃'을 누르세요." })),
