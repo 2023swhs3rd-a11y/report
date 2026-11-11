@@ -21,147 +21,229 @@ const API_URL = "https://script.google.com/macros/s/AKfycbxoJ_sdHcHi86zB7A-l656d
 
 <script id="schema">
 /* 보고서 구성. 칸을 고치려면 여기만 고치면 됩니다.
-   t: guide(가이드) · ex(예시) · warn(주의) · h(소제목) · f(쓰는 칸) · card(묶음) · ref(2차시 내용 불러오기)
-   kind: text(한 줄) · area(여러 줄) · select(고르기),  req: 완성 기준에 들어가는 칸 */
+   t: guide(가이드) · ex(예시 상자) · warn(주의) · h(소제목) · f(쓰는 칸) · card(묶음) · ref(2차시 내용 불러오기)
+      links(추천 사이트) · bloom(질문 수준 안내) · people(예시 친구 소개)
+   kind: text(한 줄) · area(여러 줄) · select(고르기),  req: 완성 기준에 들어가는 칸
+   ex: [하늘 예시, 바다 예시] — 칸 아래 '예시 보기'에 나옵니다. 둘 중 하나는 null 이어도 됩니다.
+   key 이름은 구글 시트의 열 이름이므로 바꾸지 마세요(새 칸은 새 key로 더하면 됩니다). */
 const TYPES = ["직업·학과 정보", "책", "신문 기사", "통계", "정부·공공기관 자료", "논문", "기타"];
 const LEVELS = ["잘함", "보통", "노력 필요"];
+/* 예시에 나오는 두 친구(지어낸 인물) */
+const PEOPLE = [["🩺", "하늘", "간호사가 꿈"], ["🍱", "바다", "아직 진로를 찾는 중"]];
+/* 추천 사이트: [이름, 주소, 설명] */
+const LINKS = {
+  "쉬워요 · 여기서 시작": [
+    ["커리어넷", "https://www.career.go.kr/cloud/w/main/home", "직업 정보와 학과 정보. 하는 일, 필요한 능력, 관련 학과를 쉽게 정리해 둠"],
+    ["대입정보포털 어디가", "https://www.adiga.kr", "학과가 무엇을 배우는지, 어떤 과목을 들으면 좋은지 볼 수 있음"],
+    ["진로진학부 추천 자료", "/jinhak/", "우리 학교 진로진학부가 고른 자료 모음(학과 가이드북, 진로 영상)"]
+  ],
+  "권장 · 2건 중 1건은 여기서": [
+    ["빅카인즈(뉴스 검색)", "https://www.bigkinds.or.kr", "여러 신문사 기사를 한 번에 검색. 날짜와 신문사가 분명해서 출처 적기 좋음"],
+    ["KOSIS 국가통계포털", "https://kosis.kr", "나라에서 만든 통계. '간호사 수', '음식물 쓰레기' 처럼 검색"],
+    ["e-나라지표", "https://www.index.go.kr", "주제별 통계를 그래프와 설명으로 보여 줌. KOSIS보다 읽기 쉬움"],
+    ["서울대 웹진 아로리", "https://snuarori.snu.ac.kr", "전공 소개와 선배 이야기. 서울대가 아니어도 학과 공부를 미리 엿볼 수 있음"]
+  ],
+  "도전 · 논문 초록 읽기": [
+    ["RISS", "https://www.riss.kr", "학위 논문과 학술지 검색. 초록(요약)과 결론만 읽어도 충분"],
+    ["DBpia", "https://www.dbpia.co.kr", "학술 논문 검색. 원문은 학교 계정이 필요하니 선생님께 물어보기"]
+  ]
+};
 function card(n, title, optional) {
-  const r = !optional;
+  const r = !optional, first = n === 1;
   return { t: "card", title: title, fields: [
-    { t: "f", key: "a" + n + "_title", label: "자료 제목", kind: "text", req: r },
-    { t: "f", key: "a" + n + "_src", label: "출처", hint: "누가, 언제 썼나요? (예: ○○일보, 2026.5.3.)", kind: "text", req: r },
+    { t: "f", key: "a" + n + "_title", label: "자료 제목", kind: "text", req: r,
+      ex: first ? ["커리어넷 직업정보 '간호사'", "「학교 급식 잔반, 왜 줄지 않을까」 (○○신문 기사, 예시 제목)"] : null },
+    { t: "f", key: "a" + n + "_src", label: "출처", hint: "누가, 언제 썼나요? 인터넷 자료는 사이트 이름과 내가 본 날짜를 적어요.", kind: "text", req: r,
+      ex: first ? ["커리어넷(한국직업능력연구원), 2026. 11. 12. 확인", "○○신문 ○○○ 기자, 2026. 10. 2."] : null },
     { t: "f", key: "a" + n + "_type", label: "자료 종류", kind: "select", opts: TYPES },
-    { t: "f", key: "a" + n + "_sum", label: "핵심 내용", hint: "자료를 덮고, 친구에게 설명하듯이 내 말로 3문장", kind: "area", rows: 4, req: r },
-    { t: "f", key: "a" + n + "_ans", label: optional ? "이 자료로 내 답이 달라졌나요?" : "내 질문에 주는 답", kind: "area", rows: 2 },
-    { t: "f", key: "a" + n + "_new", label: "새로 생긴 궁금증", kind: "text" }
+    { t: "f", key: "a" + n + "_sum", label: "핵심 내용", hint: "자료를 덮고, 친구에게 설명하듯이 내 말로 3문장", kind: "area", rows: 4, req: r,
+      ex: first ? [
+        "간호사는 환자를 24시간 돌봐야 해서 여러 사람이 시간을 나누어 교대로 일한다. 밤에 일하는 날은 생활 리듬이 바뀌어서 피로가 쌓이기 쉽다고 한다. 그래서 체력 관리와 스트레스 관리가 중요한 직업이라고 설명한다.",
+        "학생들이 많이 남기는 음식은 주로 채소 반찬과 처음 보는 메뉴라고 한다. 먹는 양은 학생마다 다른데 배식은 똑같이 나가서 남는 경우도 있다. 기사는 학생들이 메뉴 정하기에 참여한 학교에서 잔반이 줄었다고 소개한다."] : null },
+    { t: "f", key: "a" + n + "_ans", label: optional ? "이 자료로 내 답이 달라졌나요?" : "내 질문에 주는 답", kind: "area", rows: 2,
+      ex: first ? ["밤 근무는 피로와 생활 리듬 문제 때문에 건강에 영향을 줄 수 있다는 실마리를 얻었다.",
+        "학생 의견을 메뉴에 반영하는 것이 잔반을 줄이는 한 가지 방법이 될 수 있다."] : null },
+    { t: "f", key: "a" + n + "_new", label: "새로 생긴 궁금증", kind: "text",
+      ex: first ? ["근무 시간을 나누는 방식을 바꾸면 덜 피곤할까?", "우리 학교 학생들은 어떤 반찬을 가장 많이 남길까?"] : null }
   ] };
 }
 function friend(n) {
-  return { t: "card", title: "친구 " + n, fields: [
-    { t: "f", key: "f" + n + "n", label: "친구 이름", kind: "text" },
-    { t: "f", key: "f" + n + "g", label: "좋았던 점", kind: "text" },
-    { t: "f", key: "f" + n + "q", label: "궁금한 점 (질문)", kind: "text" }
+  const first = n === 1;
+  return { t: "card", title: "받은 피드백 " + "①②③"[n - 1], fields: [
+    { t: "f", key: "f" + n + "n", label: "말해 준 사람", hint: first ? "친구 이름이나 '선생님'" : null, kind: "text" },
+    { t: "f", key: "f" + n + "g", label: "좋았던 점", kind: "text",
+      ex: first ? ["근거마다 어느 자료인지 말해 줘서 믿음이 갔어.", "우리 학교 이야기라서 귀에 쏙 들어왔어."] : null },
+    { t: "f", key: "f" + n + "q", label: "궁금한 점 (질문)", kind: "text",
+      ex: first ? ["간호사 말고 밤에 일하는 다른 직업도 비슷할까?", "자율 배식을 하면 오히려 더 많이 가져가는 친구는 없을까?"] : null }
   ] };
 }
 const STAGES = [
   { id: "s1", badge: "1차시", kind: "수업", title: "관심에서 질문으로", goal: "탐구 질문 1개를 정하고 선생님 확인 받기", time: "수업 50분", check: 1,
     blocks: [
       { t: "guide", title: "가이드", items: [
-        "1단계는 많이 적는 것이 중요합니다. 좋은 단어인지 따지지 말고 떠오르는 대로 씁니다.",
-        "진로가 정해지지 않았어도 괜찮습니다. 좋아하는 것, 불편했던 것에서 시작하면 됩니다.",
-        "'간호사', '게임' 같은 단어는 주제가 아닙니다. 2단계에서 단어를 질문으로 바꿉니다." ] },
+        "1단계는 많이 적는 것이 중요해요. 좋은 단어인지 따지지 말고 떠오르는 대로 씁니다.",
+        "진로가 정해지지 않았어도 괜찮아요. 좋아하는 것, 불편했던 것에서 시작하면 됩니다.",
+        "'간호사', '게임' 같은 단어는 아직 주제가 아니에요. 2단계에서 단어를 질문으로 바꿉니다.",
+        "칸마다 '👀 예시 보기'를 누르면 두 친구가 쓴 예시가 나와요. 따라 쓰지 말고 '이렇게 쓰는구나' 하고 참고만 해요." ] },
+      { t: "people" },
       { t: "h", text: "1단계 · 관심 단어 모으기", sub: "모두 합쳐 5개 이상" },
-      { t: "f", key: "career", label: "관심 진로", hint: "없으면 '찾는 중'이라고 씁니다", kind: "text" },
-      { t: "f", key: "k1", label: "요즘 자주 보거나 찾아보는 것", kind: "text" },
-      { t: "f", key: "k2", label: "관심 있는 직업이나 학과", kind: "text" },
-      { t: "f", key: "k3", label: "재미있었던 수업이나 단원", kind: "text" },
-      { t: "f", key: "k4", label: "생활하면서 불편하거나 이상하다고 느낀 것", kind: "text" },
-      { t: "f", key: "word", label: "가장 오래 이야기할 수 있는 단어 1개", hint: "이 단어로 질문을 만듭니다", kind: "text" },
+      { t: "f", key: "career", label: "관심 진로", hint: "없으면 '찾는 중'이라고 써요", kind: "text",
+        ex: ["간호사", "찾는 중 (요리나 환경 쪽에 관심이 있음)"] },
+      { t: "f", key: "k1", label: "요즘 자주 보거나 찾아보는 것", kind: "text",
+        ex: ["병원 브이로그, 의학 드라마, 응급실 다큐멘터리", "요리 유튜브, 편의점 신상 리뷰, 환경 다큐멘터리"] },
+      { t: "f", key: "k2", label: "관심 있는 직업이나 학과", kind: "text",
+        ex: ["간호사, 간호학과, 보건교사", "아직 모름. 조리사? 식품영양학과?"] },
+      { t: "f", key: "k3", label: "재미있었던 수업이나 단원", kind: "text",
+        ex: ["통합과학 '생명 시스템' 단원, 보건 시간 심폐소생술 실습", "통합사회 '자원과 지속 가능한 발전', 기술·가정 식생활 단원"] },
+      { t: "f", key: "k4", label: "생활하면서 불편하거나 이상하다고 느낀 것", kind: "text",
+        ex: ["할머니가 입원하셨을 때 밤에도 간호사 선생님들이 쉬지 않고 바쁘게 다니셨다.", "급식 시간마다 잔반통이 가득 차는 게 아깝다."] },
+      { t: "f", key: "word", label: "가장 오래 이야기할 수 있는 단어 1개", hint: "이 단어로 질문을 만들어요", kind: "text",
+        ex: ["간호사의 밤 근무", "급식 잔반"] },
       { t: "h", text: "2단계 · 단어를 질문으로 바꾸기" },
-      { t: "ex", title: "질문 틀에 단어를 넣어 봅니다", lines: [
+      { t: "ex", title: "질문 틀에 단어를 넣어 봐요", lines: [
         ["왜 ~일까?", "게임 → 확률형 아이템은 왜 규제 대상이 되었을까?"],
         ["~는 ~에 어떤 영향을 줄까?", "간호사 → 야간 교대 근무는 간호사의 건강에 어떤 영향을 줄까?"],
         ["~와 ~는 무엇이 다를까?", "자동차 → 전기차와 수소차는 충전 방식이 어떻게 다를까?"],
         ["~를 줄이려면 어떤 방법이 있을까?", "급식 → 우리 학교 급식 잔반을 줄이려면 어떤 방법이 있을까?"],
         ["~는 앞으로 어떻게 달라질까?", "유튜버 → AI 영상 도구는 영상 편집자의 일을 어떻게 바꿀까?"] ] },
-      { t: "f", key: "c1", label: "후보 질문 ①", kind: "text" },
+      { t: "f", key: "c1", label: "후보 질문 ①", kind: "text",
+        ex: ["① 간호사는 왜 밤에도 일할까?  ② 야간 교대 근무는 간호사의 건강에 어떤 영향을 줄까?  ③ 간호사가 부족하면 환자에게 어떤 일이 생길까?",
+          "① 급식 잔반은 하루에 얼마나 나올까?  ② 우리 학교 급식 잔반을 줄이려면 어떤 방법이 있을까?  ③ 버려진 잔반은 어떻게 처리될까?"] },
       { t: "f", key: "c2", label: "후보 질문 ②", kind: "text" },
       { t: "f", key: "c3", label: "후보 질문 ③", kind: "text" },
-      { t: "guide", title: "짝과 함께 후보 질문을 점검합니다", items: [
-        "검색 한 번으로 답이 끝나지 않는가?",
-        "자료를 찾을 수 있는가?",
-        "내 관심이나 배우는 과목과 이어지는가?" ] },
+      { t: "guide", title: "후보 질문을 점검해요 (혼자, 또는 친구들과)", items: [
+        "검색 한 번으로 답이 끝나지 않는가? (하늘의 ①은 검색 한 번이면 끝나서 탈락)",
+        "자료를 찾을 수 있는가? (바다의 ③은 우리 지역 처리 과정을 찾기 어려워서 보류)",
+        "내 관심이나 배우는 과목과 이어지는가?",
+        "친구들과 서로 질문을 바꿔 보고 의견을 나눠도 좋아요. 혼자 해도 괜찮아요." ] },
+      { t: "bloom" },
       { t: "h", text: "3단계 · 질문 정하고 계획 세우기" },
-      { t: "ex", title: "질문을 고칠 때 참고하세요", lines: [
+      { t: "ex", title: "질문을 고칠 때 참고해요", lines: [
         ["너무 넓은 질문", "\"인공지능이란 무엇일까?\" → \"AI 번역기는 통역사의 일을 얼마나 대신할 수 있을까?\""],
-        ["검색 한 번으로 끝나는 질문", "\"간호사 연봉은 얼마일까?\" → \"간호사는 왜 일을 일찍 그만두는 경우가 많을까?\""] ] },
-      { t: "f", key: "question", label: "나의 탐구 질문", hint: "점검을 가장 많이 통과한 후보를 고르고, 필요하면 고쳐 씁니다", kind: "area", rows: 2, req: true },
-      { t: "f", key: "reason", label: "이 질문을 고른 이유", ph: "나는 ~을 보고(겪고) ~이 궁금해졌다.", kind: "area", rows: 3, req: true },
-      { t: "f", key: "guess", label: "지금 내가 예상하는 답", hint: "틀려도 됩니다. 나중에 비교합니다", kind: "area", rows: 2 },
-      { t: "f", key: "todo", label: "알아볼 것 2~3가지", hint: "질문에 답하려면 무엇을 알아야 할까요?", kind: "area", rows: 3 },
-      { t: "f", key: "subject", label: "관련 있는 과목", kind: "text" }
+        ["검색 한 번으로 끝나는 질문", "\"간호사 연봉은 얼마일까?\" → \"간호사는 왜 일을 일찍 그만두는 경우가 많을까?\""],
+        ["너무 어려운 질문", "\"암을 완전히 치료하는 방법은?\" → \"암 치료에 쓰는 표적 치료제는 기존 항암제와 무엇이 다를까?\""] ] },
+      { t: "f", key: "question", label: "나의 탐구 질문", hint: "점검을 가장 많이 통과한 후보를 고르고, 필요하면 고쳐 써요", kind: "area", rows: 2, req: true,
+        ex: ["야간 교대 근무는 간호사의 건강에 어떤 영향을 줄까?", "우리 학교 급식 잔반을 줄이려면 어떤 방법이 있을까?"] },
+      { t: "f", key: "reason", label: "이 질문을 고른 이유", ph: "나는 ~을 보고(겪고) ~이 궁금해졌다.", kind: "area", rows: 3, req: true,
+        ex: ["할머니가 입원하셨을 때 밤에도 간호사 선생님들이 쉬지 않고 일하시는 모습을 보고, 밤에 일하면 몸이 괜찮을지 궁금해졌다. 간호사가 되면 나도 겪을 일이라서 미리 알고 싶었다.",
+          "급식 시간마다 잔반통이 넘치는 것을 보고 아깝다는 생각이 들었다. 환경 다큐멘터리에서 음식물 쓰레기도 온실가스를 만든다는 이야기를 듣고, 우리 학교에서 할 수 있는 일이 있는지 궁금해졌다."] },
+      { t: "f", key: "guess", label: "지금 내가 예상하는 답", hint: "틀려도 돼요. 나중에 비교해요", kind: "area", rows: 2,
+        ex: ["잠을 못 자서 피곤하고 몸이 약해질 것 같다.", "맛없는 반찬이 남는 거니까 메뉴를 바꾸면 줄어들 것 같다."] },
+      { t: "f", key: "todo", label: "알아볼 것 2~3가지", hint: "질문에 답하려면 무엇을 알아야 할까요?", kind: "area", rows: 3,
+        ex: ["① 밤에 일하면 몸에 어떤 변화가 생기는지 ② 간호사들이 실제로 어떤 근무표로 일하는지 ③ 건강을 지키려고 병원이나 나라가 하는 노력",
+          "① 학교 급식 잔반이 왜 생기는지 ② 다른 학교에서 잔반을 줄인 방법 ③ 잔반을 줄이면 무엇이 좋아지는지"] },
+      { t: "f", key: "subject", label: "관련 있는 과목", kind: "text",
+        ex: ["통합과학(생명 시스템), 보건", "통합사회(자원과 지속 가능한 발전), 기술·가정"] }
     ] },
   { id: "s2", badge: "과제 1", kind: "과제", title: "자료 카드 2장 쓰기", goal: "자료 2건을 찾아 읽고 카드 2장 채우기", time: "약 40~50분",
     blocks: [
-      { t: "guide", title: "자료는 여기서 찾습니다", items: [
-        "기본: 커리어넷 직업·학과 정보, 대입정보포털 '어디가' 학과 정보, 교과서, 도서관 책",
-        "권장: 신문 기사, 정부·공공기관 자료, 통계(KOSIS 국가통계포털). 2건 중 1건은 여기서 찾아봅니다.",
-        "도전: 논문(DBpia, RISS)의 초록과 결론" ] },
+      { t: "guide", title: "가이드", items: [
+        "1차시에 쓴 '알아볼 것'을 옆에 두고, 그것을 알려 주는 자료를 찾아요.",
+        "검색할 때는 질문 전체가 아니라 핵심 단어 2~3개만 넣어요. 예: 간호사 교대근무 건강",
+        "자료 1건에 20분쯤: 읽기 10분, 카드 쓰기 10분이면 충분해요." ] },
+      { t: "links" },
       { t: "guide", title: "믿을 만한 자료인지 묻는 질문 3개", items: [
         "누가 썼나? 기관, 기자, 전문가의 이름이 있는가",
         "언제 썼나? 너무 오래된 자료는 아닌가",
         "근거가 있나? 숫자나 조사 결과, 출처가 있는가" ] },
-      { t: "warn", text: "출처로 쓰지 않는 자료: 개인 블로그, 카페 글, 지식인 답변. 누가 썼는지, 근거가 무엇인지 확인할 수 없기 때문입니다. AI가 알려 준 내용은 원래 자료를 찾아 확인한 것만 씁니다." },
-      { t: "ex", title: "'내 말로 쓰기'는 이렇게 합니다 (형식을 보여 주는 예시)", lines: [
+      { t: "warn", text: "출처로 쓰지 않는 자료: 개인 블로그, 카페 글, 지식인 답변. 누가 썼는지, 근거가 무엇인지 확인할 수 없기 때문이에요. 읽고 힌트를 얻는 건 괜찮아요. AI가 알려 준 내용은 원래 자료를 찾아 확인한 것만 써요." },
+      { t: "ex", title: "'내 말로 쓰기'는 이렇게 해요", lines: [
         ["△ 옮겨 적기", "\"교대 근무자는 생체 리듬의 교란으로 인하여 수면의 질이 저하되는 것으로 보고되었다.\""],
-        ["○ 내 말로", "\"밤낮이 바뀌는 근무를 하면 몸의 리듬이 깨져서 잠을 깊이 못 잔다고 한다.\""] ] },
+        ["○ 내 말로", "\"밤낮이 바뀌는 근무를 하면 몸의 리듬이 깨져서 잠을 깊이 못 잔다고 한다.\""],
+        ["방법", "자료를 읽고 → 덮은 다음 → 친구에게 설명하듯이 써요. 모르는 단어는 뜻을 찾아 쉬운 말로 바꿔요."] ] },
       card(1, "자료 카드 ①"),
-      card(2, "자료 카드 ②")
+      card(2, "자료 카드 ② · 카드 ①의 예시를 참고해요")
     ] },
   { id: "s3", badge: "2차시", kind: "수업", title: "탐구 결과 정리", goal: "문장 틀 7칸을 모두 채우기", time: "수업 50분", check: 2,
     blocks: [
       { t: "guide", title: "가이드", items: [
-        "먼저 10분, 짝과 자료 카드를 바꿔 읽습니다. 출처가 있는지, 옮겨 적은 문장은 없는지 서로 알려 줍니다.",
-        "문장 틀의 '~' 자리에 내 내용을 넣어 한 칸에 1~2문장씩 씁니다.",
-        "근거는 반드시 자료 카드에서 가져옵니다. 자료에 없는 내용을 지어내지 않습니다.",
-        "예상과 답이 같아도, 달라도 괜찮습니다. 무엇이 같고 달랐는지를 쓰면 됩니다." ] },
+        "자료 카드 두 장을 다시 읽고 시작해요. (선택) 친구들과 카드를 바꿔 읽고 출처가 있는지, 옮겨 적은 문장은 없는지 서로 알려 줘도 좋아요.",
+        "문장 틀의 '~' 자리에 내 내용을 넣어 한 칸에 1~2문장씩 써요.",
+        "근거는 반드시 자료 카드에서 가져와요. 자료에 없는 내용을 지어내지 않아요.",
+        "예상과 답이 같아도, 달라도 괜찮아요. 무엇이 같고 달랐는지를 쓰면 됩니다." ] },
       { t: "h", text: "4단계 · 문장 틀로 정리하기" },
-      { t: "f", key: "r1", label: "① 내 질문", ph: "내가 알아본 질문은 \"~\"이다.", kind: "area", rows: 2, req: true },
-      { t: "f", key: "r2", label: "② 내가 찾은 답", ph: "내가 찾은 답은 ~이다.", kind: "area", rows: 2, req: true },
-      { t: "f", key: "r3", label: "③ 근거 1", ph: "자료 ①에 따르면 ~", kind: "area", rows: 2, req: true },
-      { t: "f", key: "r4", label: "④ 근거 2", ph: "자료 ②에서도(자료 ②에서는) ~", kind: "area", rows: 2, req: true },
-      { t: "f", key: "r5", label: "⑤ 처음 예상과 비교", ph: "처음에는 ~라고 생각했는데, 알아보니 ~", kind: "area", rows: 2, req: true },
-      { t: "f", key: "r6", label: "⑥ 내 생각", ph: "나는 ~라고 생각한다. 왜냐하면 ~", kind: "area", rows: 2, req: true },
-      { t: "f", key: "r7", label: "⑦ 아직 모르는 것", ph: "이번에 알아내지 못한 것은 ~", kind: "area", rows: 2, req: true }
+      { t: "f", key: "r1", label: "① 내 질문", ph: "내가 알아본 질문은 \"~\"이다.", kind: "area", rows: 2, req: true,
+        ex: ["내가 알아본 질문은 \"야간 교대 근무는 간호사의 건강에 어떤 영향을 줄까?\"이다.", "내가 알아본 질문은 \"우리 학교 급식 잔반을 줄이려면 어떤 방법이 있을까?\"이다."] },
+      { t: "f", key: "r2", label: "② 내가 찾은 답", ph: "내가 찾은 답은 ~이다.", kind: "area", rows: 2, req: true,
+        ex: ["내가 찾은 답은 밤 근무가 잠의 질을 떨어뜨리고 피로를 쌓이게 해서 건강에 나쁜 영향을 줄 수 있다는 것이다.",
+          "내가 찾은 답은 학생들이 메뉴와 먹을 양을 정하는 데 참여하면 잔반을 줄일 수 있다는 것이다."] },
+      { t: "f", key: "r3", label: "③ 근거 1", ph: "자료 ①에 따르면 ~", kind: "area", rows: 2, req: true,
+        ex: ["자료 ①(커리어넷 직업정보)에 따르면 간호사는 교대 근무를 해서 생활 리듬이 자주 바뀌고 피로가 쌓이기 쉽다.",
+          "자료 ①(신문 기사)에 따르면 학생들이 메뉴 정하기에 참여한 학교에서 잔반이 줄었다."] },
+      { t: "f", key: "r4", label: "④ 근거 2", ph: "자료 ②에서도(자료 ②에서는) ~", kind: "area", rows: 2, req: true,
+        ex: ["자료 ②(신문 기사)에서도 간호사가 일을 그만두는 이유 중 하나로 힘든 근무 환경을 꼽았다.",
+          "자료 ②(교육청 안내 자료)에서는 학생이 먹을 양을 스스로 정하는 '자율 배식'을 잔반 줄이기 방법으로 소개했다."] },
+      { t: "f", key: "r5", label: "⑤ 처음 예상과 비교", ph: "처음에는 ~라고 생각했는데, 알아보니 ~", kind: "area", rows: 2, req: true,
+        ex: ["처음에는 잠을 못 자는 체력 문제라고만 생각했는데, 알아보니 근무표를 짜는 방식 같은 제도의 문제이기도 했다.",
+          "처음에는 맛없는 반찬 때문이라고 생각했는데, 알아보니 양이 많거나 처음 보는 음식이라서 남기는 경우도 많았다."] },
+      { t: "f", key: "r6", label: "⑥ 내 생각", ph: "나는 ~라고 생각한다. 왜냐하면 ~", kind: "area", rows: 2, req: true,
+        ex: ["나는 간호사 개인이 체력을 기르는 것만으로는 부족하고, 병원이 근무 시간을 나누는 방식을 바꿔야 한다고 생각한다. 왜냐하면 두 자료 모두 개인의 노력보다 근무 환경을 더 큰 원인으로 보았기 때문이다.",
+          "나는 우리 학교에서도 '먹을 만큼 받기'를 해 보면 좋겠다고 생각한다. 왜냐하면 메뉴를 바꾸는 것보다 바로 해 볼 수 있고, 자료 ②에서 효과가 있었다고 했기 때문이다."] },
+      { t: "f", key: "r7", label: "⑦ 아직 모르는 것", ph: "이번에 알아내지 못한 것은 ~", kind: "area", rows: 2, req: true,
+        ex: ["이번에 알아내지 못한 것은 다른 나라 병원은 간호사 근무 시간을 어떻게 정하는지이다.",
+          "이번에 알아내지 못한 것은 우리 학교 학생들이 실제로 어떤 반찬을 많이 남기는지이다."] }
     ] },
   { id: "s4", badge: "과제 2", kind: "과제", title: "한 문단으로 완성하고 발표 준비하기", goal: "6~8문장 한 문단과 발표 메모 쓰기", time: "약 30~40분",
     blocks: [
       { t: "guide", title: "가이드", items: [
-        "2차시의 ①~⑦을 순서대로 이어서 한 문단으로 씁니다. 새로 쓰는 것이 아니라 이어 붙이고 다듬는 일입니다.",
-        "문장 사이에 '그래서', '하지만', '또한' 같은 이음말을 넣으면 글이 자연스러워집니다.",
-        "다 쓴 뒤 소리 내어 한 번 읽어 봅니다. 읽다가 막히는 곳을 고칩니다." ] },
+        "2차시의 ①~⑦을 순서대로 이어서 한 문단으로 써요. 새로 쓰는 것이 아니라 이어 붙이고 다듬는 일이에요.",
+        "문장 사이에 '그래서', '하지만', '또한' 같은 이음말을 넣으면 글이 자연스러워져요.",
+        "다 쓴 뒤 소리 내어 한 번 읽어 봐요. 읽다가 막히는 곳을 고쳐요." ] },
       { t: "ref" },
-      { t: "ex", title: "문단 예시 (형식을 보여 주는 예시이며 실제 조사 결과가 아닙니다)", lines: [
-        ["", "내가 알아본 질문은 \"야간 교대 근무는 간호사의 건강에 어떤 영향을 줄까?\"이다. 내가 찾은 답은 밤 근무가 잠과 집중력에 나쁜 영향을 준다는 것이다. 자료 ①에 따르면 근무 시간이 자주 바뀌면 몸의 리듬이 깨져 깊이 자기 어렵다. 자료 ②에서도 교대 근무의 어려움이 일을 그만두는 이유 중 하나로 나온다. 처음에는 체력만의 문제라고 생각했는데, 알아보니 근무 제도의 문제이기도 했다. 그래서 나는 근무표를 짜는 방식이 바뀌어야 한다고 생각한다. 다른 나라는 어떻게 하는지는 아직 알아내지 못했다."] ] },
-      { t: "f", key: "para", label: "나의 탐구 결과", hint: "한 문단, 6~8문장", kind: "area", rows: 10, req: true },
+      { t: "f", key: "para", label: "나의 탐구 결과", hint: "한 문단, 6~8문장", kind: "area", rows: 10, req: true,
+        ex: ["내가 알아본 질문은 \"야간 교대 근무는 간호사의 건강에 어떤 영향을 줄까?\"이다. 내가 찾은 답은 밤 근무가 잠의 질을 떨어뜨리고 피로를 쌓이게 해서 건강에 나쁜 영향을 줄 수 있다는 것이다. 자료 ①에 따르면 간호사는 교대 근무 때문에 생활 리듬이 자주 바뀌어 피로가 쌓이기 쉽다. 자료 ②에서도 힘든 근무 환경이 간호사가 일을 그만두는 이유 중 하나로 나온다. 처음에는 체력만의 문제라고 생각했는데, 알아보니 근무표를 짜는 방식 같은 제도의 문제이기도 했다. 그래서 나는 개인의 노력만이 아니라 병원이 근무 방식을 바꾸는 것도 필요하다고 생각한다. 하지만 다른 나라 병원은 근무 시간을 어떻게 정하는지는 아직 알아내지 못했다.",
+          "내가 알아본 질문은 \"우리 학교 급식 잔반을 줄이려면 어떤 방법이 있을까?\"이다. 내가 찾은 답은 학생들이 메뉴와 먹을 양을 정하는 데 참여하면 잔반을 줄일 수 있다는 것이다. 자료 ①에 따르면 학생들이 메뉴 정하기에 참여한 학교에서 잔반이 줄었다. 또한 자료 ②에서는 먹을 만큼 받는 '자율 배식'을 방법으로 소개했다. 처음에는 맛없는 반찬 때문이라고 생각했는데, 알아보니 양이 많거나 처음 보는 음식이라서 남기는 경우도 많았다. 그래서 나는 우리 학교에서도 먹을 만큼 받기를 먼저 해 보면 좋겠다고 생각한다. 다만 우리 학교 학생들이 실제로 어떤 반찬을 많이 남기는지는 아직 조사하지 못했다."] },
       { t: "h", text: "발표 메모", sub: "3분 발표. 문장으로 쓰지 말고 핵심 단어만" },
-      { t: "f", key: "m1", label: "① 질문", kind: "text" },
-      { t: "f", key: "m2", label: "② 내가 찾은 답", kind: "text" },
-      { t: "f", key: "m3", label: "③ 근거 2가지", kind: "text" },
-      { t: "f", key: "m4", label: "④ 아직 모르는 것", kind: "text" },
+      { t: "f", key: "m1", label: "① 질문", kind: "text", ex: ["야간 근무 → 간호사 건강?", "급식 잔반 줄이는 방법?"] },
+      { t: "f", key: "m2", label: "② 내가 찾은 답", kind: "text", ex: ["잠의 질↓, 피로↑", "메뉴·양 정하기에 학생 참여"] },
+      { t: "f", key: "m3", label: "③ 근거 2가지", kind: "text", ex: ["커리어넷 직업정보 / 신문 기사(그만두는 이유)", "신문 기사(참여 학교) / 교육청 자료(자율 배식)"] },
+      { t: "f", key: "m4", label: "④ 아직 모르는 것", kind: "text", ex: ["다른 나라 근무 제도", "우리 학교 잔반 종류"] },
       { t: "h", text: "도전 · 자료 카드 ③", sub: "선택. 기사·통계·공공기관 자료·논문 초록 중에서" },
+      { t: "links", compact: true },
       card(3, "자료 카드 ③ (선택)", true)
     ] },
   { id: "s5", badge: "3차시", kind: "수업", title: "발표와 피드백, 돌아보기", goal: "발표하고, 다음에 할 일을 정하기", time: "수업 50분", check: 3,
     blocks: [
       { t: "guide", title: "가이드", items: [
-        "4명이 한 모둠입니다. 한 사람당 발표 3분 + 피드백 2분입니다.",
-        "듣는 사람은 좋았던 점 1개, 궁금한 점 1개를 말해 줍니다. \"잘했어\"보다 \"~한 점이 좋았어\"처럼 구체적으로 말합니다.",
-        "발표한 사람은 친구가 해 준 말을 아래에 받아 적습니다." ] },
-      { t: "h", text: "5단계 · 내가 받은 피드백" },
+        "발표 메모를 보고 3분 동안 말해요. 순서는 질문 → 답 → 근거 → 아직 모르는 것.",
+        "발표는 선생님 안내에 따라 반 전체, 모둠, 짝 가운데 하나로 해요. 친구들과 함께 듣고 의견을 나누면 더 좋아요.",
+        "듣는 사람은 좋았던 점 1개, 궁금한 점 1개를 말해 줘요. \"잘했어\"보다 \"~한 점이 좋았어\"처럼 구체적으로 말해요." ] },
+      { t: "h", text: "5단계 · 내가 받은 피드백", sub: "선택. 친구나 선생님께 들은 말을 적어요" },
       friend(1), friend(2), friend(3),
-      { t: "h", text: "6단계 · 돌아보기와 다음 계획", sub: "실제로 한 일과 생각을 솔직하게 씁니다" },
-      { t: "f", key: "v1", label: "친구 질문 하나에 답하기", hint: "바로 답하기 어려우면 '더 알아볼 것'으로 적습니다", kind: "area", rows: 3 },
-      { t: "f", key: "v2", label: "이 탐구로 달라진 내 생각", ph: "전에는 ~, 지금은 ~", kind: "area", rows: 3, req: true },
-      { t: "f", key: "v3", label: "가장 어려웠던 점과 해결한 방법", kind: "area", rows: 3 },
-      { t: "f", key: "v4", label: "관련된 학과나 직업", kind: "text" },
-      { t: "f", key: "v5", label: "더 배우고 싶은 과목", hint: "2학년 과목 선택에 참고합니다", kind: "text" },
-      { t: "f", key: "v6", label: "다음에 알아보고 싶은 질문", hint: "2학년 활동의 출발점이 됩니다", kind: "area", rows: 2, req: true },
+      { t: "h", text: "6단계 · 돌아보기와 다음 계획", sub: "실제로 한 일과 생각을 솔직하게" },
+      { t: "f", key: "v1", label: "받은 질문 하나에 답하기", hint: "친구나 선생님이 한 질문 하나에 답해요. 질문을 받지 못했다면 스스로 질문을 하나 만들어 답해요.", kind: "area", rows: 3,
+        ex: ["질문: 밤에 일하는 다른 직업도 비슷할까? → 소방관, 경찰관도 교대 근무를 하니까 비슷한 어려움이 있을 것 같다. 다음에 자료를 찾아 간호사와 비교해 보고 싶다.",
+          "질문: 자율 배식을 하면 더 많이 가져가는 친구는 없을까? → 그럴 수도 있다. 처음에는 '한 번 더 받기'만 허용하는 방식으로 해 보면 좋겠다."] },
+      { t: "f", key: "v2", label: "이 탐구로 달라진 내 생각", ph: "전에는 ~, 지금은 ~", kind: "area", rows: 3, req: true,
+        ex: ["전에는 간호사가 힘든 이유를 체력 문제로만 생각했는데, 지금은 일하는 제도와 환경도 중요하다는 것을 알게 되었다.",
+          "전에는 잔반은 먹는 사람 탓이라고 생각했는데, 지금은 배식 방법을 바꾸면 모두가 함께 줄일 수 있는 문제라고 생각한다."] },
+      { t: "f", key: "v3", label: "가장 어려웠던 점과 해결한 방법", kind: "area", rows: 3,
+        ex: ["자료에 어려운 말이 많아서 이해하기 힘들었다. 모르는 단어를 하나씩 찾아보고, 친구에게 설명하듯 다시 써 보니 이해가 됐다.",
+          "믿을 만한 자료를 찾기 어려웠다. 블로그 대신 빅카인즈에서 신문 기사를 검색하니 날짜와 출처가 분명한 자료를 찾을 수 있었다."] },
+      { t: "f", key: "v4", label: "관련된 학과나 직업", kind: "text",
+        ex: ["간호학과, 보건관리학과 / 간호사, 보건교사", "환경공학과, 식품영양학과 / 영양교사, 환경 컨설턴트"] },
+      { t: "f", key: "v5", label: "더 배우고 싶은 과목", hint: "2학년 과목 선택에 참고해요", kind: "text",
+        ex: ["생명과학, 보건, 확률과 통계", "생태와 환경, 사회와 문화, 기술·가정"] },
+      { t: "f", key: "v6", label: "다음에 알아보고 싶은 질문", hint: "2학년 활동의 출발점이 돼요", kind: "area", rows: 2, req: true,
+        ex: ["근무 사이 쉬는 시간이 짧을 때와 길 때, 간호사의 피로는 얼마나 다를까?", "우리 학교 학생들은 어떤 반찬을 가장 많이 남길까? 설문으로 직접 알아보기"] },
       { t: "h", text: "마무리" },
-      { t: "f", key: "ai", label: "AI 사용 기록", hint: "어느 단계에서 무엇을 물었고, 받은 답을 어떻게 확인했는지 적습니다. 쓰지 않았으면 '사용 안 함'. 적었다고 불이익은 없습니다.", kind: "area", rows: 3 },
-      { t: "f", key: "book", label: "읽어 보고 싶은 책이나 자료", hint: "제목을 몰라도 주제만 적으면 됩니다", kind: "text" },
+      { t: "f", key: "ai", label: "AI 사용 기록", hint: "어느 단계에서 무엇을 물었고, 받은 답을 어떻게 확인했는지 적어요. 쓰지 않았으면 '사용 안 함'. 적었다고 불이익은 없어요.", kind: "area", rows: 3,
+        ex: ["과제 1에서 어려운 기사 문단을 쉬운 말로 풀어 달라고 했다. 받은 설명을 원래 기사와 비교해 보고 맞는 부분만 참고했다.", "사용 안 함"] },
+      { t: "f", key: "book", label: "읽어 보고 싶은 책이나 자료", hint: "제목을 몰라도 주제만 적으면 돼요", kind: "text",
+        ex: ["간호사가 쓴 에세이, 잠과 건강에 관한 과학 책", "음식물 쓰레기와 기후 변화를 다룬 책"] },
       { t: "card", title: "스스로 평가하기", fields: [
         { t: "f", key: "se1", label: "내 관심에서 나온 질문을 스스로 정했다", kind: "select", opts: LEVELS },
         { t: "f", key: "se2", label: "출처가 분명한 자료를 2건 이상 찾았다", kind: "select", opts: LEVELS },
         { t: "f", key: "se3", label: "자료 내용을 내 말로 바꿔 썼다", kind: "select", opts: LEVELS },
         { t: "f", key: "se4", label: "내 답에 근거 2가지를 붙였다", kind: "select", opts: LEVELS },
-        { t: "f", key: "se5", label: "발표하고, 친구의 질문에 답했다", kind: "select", opts: LEVELS },
+        { t: "f", key: "se5", label: "발표하고, 받은 질문에 답했다", kind: "select", opts: LEVELS },
         { t: "f", key: "se6", label: "다음에 할 일을 구체적으로 정했다", kind: "select", opts: LEVELS } ] },
-      { t: "f", key: "last", label: "활동을 마치며 한마디", kind: "area", rows: 3 }
+      { t: "f", key: "last", label: "활동을 마치며 한마디", kind: "area", rows: 3 },
+      { t: "college" }
     ] }
 ];
-const LOOK = { s1: "💡", s2: "📚", s3: "🧩", s4: "✍️", s5: "🎤" };
 const RUBRIC = [["t_r1", "질문"], ["t_r2", "자료"], ["t_r3", "이해"], ["t_r4", "내 생각"], ["t_r5", "소통·성찰"]];
+const LOOK = { s1: "💡", s2: "📚", s3: "🧩", s4: "✍️", s5: "🎤" };
 </script>
 
 <style>
@@ -182,11 +264,12 @@ const RUBRIC = [["t_r1", "질문"], ["t_r2", "자료"], ["t_r3", "이해"], ["t_
   color-scheme: light;
 }
 /* 단계 색: --c 진한 색(띠·점), --ci 글자 색, --cb 연한 바탕 */
+/* 🏫 수업은 따뜻한 색(노랑·주황·빨강)과 실선, 🏠 과제는 차가운 색(하늘·남색)과 점선 */
 .c-s1 { --c: #f59e0b; --ci: #92400e; --cb: #fef3c7; }
 .c-s2 { --c: #0ea5e9; --ci: #075985; --cb: #e0f2fe; }
-.c-s3 { --c: #22c55e; --ci: #166534; --cb: #dcfce7; }
-.c-s4 { --c: #ec4899; --ci: #9d174d; --cb: #fce7f3; }
-.c-s5 { --c: #8b5cf6; --ci: #5b21b6; --cb: #ede9fe; }
+.c-s3 { --c: #f97316; --ci: #9a3412; --cb: #ffedd5; }
+.c-s4 { --c: #6366f1; --ci: #3730a3; --cb: #e0e7ff; }
+.c-s5 { --c: #f43f5e; --ci: #9f1239; --cb: #ffe4e6; }
 @media (prefers-color-scheme: dark) {
   :root {
     --paper: #14161b; --card: #1b1e25; --soft: #232731; --subtle: #1f232b;
@@ -197,9 +280,9 @@ const RUBRIC = [["t_r1", "질문"], ["t_r2", "자료"], ["t_r3", "이해"], ["t_
   }
   .c-s1 { --c: #fbbf24; --ci: #fcd34d; --cb: #2d2612; }
   .c-s2 { --c: #38bdf8; --ci: #7dd3fc; --cb: #132634; }
-  .c-s3 { --c: #4ade80; --ci: #86efac; --cb: #142a1c; }
-  .c-s4 { --c: #f472b6; --ci: #f9a8d4; --cb: #2f1724; }
-  .c-s5 { --c: #a78bfa; --ci: #c4b5fd; --cb: #221c38; }
+  .c-s3 { --c: #fb923c; --ci: #fdba74; --cb: #2f1d12; }
+  .c-s4 { --c: #818cf8; --ci: #a5b4fc; --cb: #1c1f3a; }
+  .c-s5 { --c: #fb7185; --ci: #fda4af; --cb: #2f161b; }
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-padding-top: 100px; }
@@ -227,8 +310,12 @@ body:not(.is-wide) .bon-bar { --bon-max: 820px; }
 .bon-bar-in { max-width: var(--bon-max, 820px); margin: 0 auto; padding: 8px 16px; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .bon-bar a { font-weight: 700; text-decoration: none; color: var(--bon-brand, #1e3a8a); flex: none; }
 .bon-bar span { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bon-footer { margin: 40px 0 28px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; }
+/* 바닥글: 모든 줄을 본문과 같이 왼쪽에 맞춘다 */
+.bon-footer { margin: 44px auto 28px; padding-top: 0; border-top: 0; color: var(--muted); font-size: .85rem; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 4px; text-align: left; }
+.bon-footer::before { content: ""; align-self: stretch; height: 1px; background: var(--line); margin-bottom: 12px; }
 .bon-footer p { margin: 0; }
+.bon-footer a { color: inherit; font-weight: 700; }
+body.is-wide #foot { max-width: 1160px; }
 
 /* 첫 화면 */
 .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 10px 22px; align-items: center; padding: 26px 0 8px; }
@@ -250,7 +337,7 @@ body:not(.is-wide) .bon-bar { --bon-max: 820px; }
 .flow li b { color: var(--text); font-size: .96rem; }
 .flow li b small { font-weight: 700; color: var(--ci); font-size: .78rem; margin-right: 6px; }
 .flow li span { color: var(--body); font-size: .84rem; }
-.links { text-align: center; margin: 16px 0 0; font-size: .9rem; }
+
 @media (max-width: 720px) { .login { grid-template-columns: 1fr; } .login .start { order: -1; } }
 
 /* 머리 줄(로그인한 뒤) */
@@ -366,6 +453,93 @@ details.ref ol { margin: 8px 0; padding-left: 22px; }
 .confetti i { position: absolute; top: -14px; width: 8px; height: 13px; border-radius: 2px; animation: fall 1.9s cubic-bezier(.25,.6,.4,1) forwards; }
 @keyframes fall { to { transform: translate(var(--dx), 108vh) rotate(var(--rot)); } }
 
+/* ── 수업·과제 구분 ── */
+.klegend { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; font-size: .84rem; font-weight: 700; }
+.klegend span { padding: 3px 10px; border-radius: 999px; }
+.klegend .k-cls { background: #fff3e0; color: #9a3412; border: 1.5px solid #fdba74; }
+.klegend .k-hw { background: #e8f1ff; color: #1e40af; border: 1.5px dashed #93b4f5; }
+.kpill { display: inline-block; font-size: .72rem; font-weight: 800; border-radius: 999px; padding: 1px 8px; margin-right: 6px; vertical-align: 1px; }
+.k-cls .kpill { color: #9a3412; background: #fff; border: 1.5px solid #fdba74; }
+.k-hw .kpill { color: #fff; background: #3b6fd8; }
+.flow li.k-hw { outline: 1.5px dashed color-mix(in srgb, var(--c) 65%, transparent); outline-offset: -1.5px; }
+.flow li.k-hw .em { box-shadow: inset 0 0 0 2px var(--c), 0 0 0 3px var(--card), 0 0 0 4.5px color-mix(in srgb, var(--c) 50%, transparent); }
+.nav button.k-hw { border-style: dashed; border-color: color-mix(in srgb, var(--c) 45%, var(--line)); background: color-mix(in srgb, var(--c) 5%, var(--card)); }
+.nav button.k-hw[aria-current=true] { box-shadow: none; border-width: 2px; }
+.stage.k-hw { border-top-style: dashed; background-image: repeating-linear-gradient(0deg, transparent 0 31px, color-mix(in srgb, var(--c) 6%, transparent) 31px 32px); }
+.kband { margin-top: 10px; font-size: .9rem; color: var(--body); border-radius: 12px; padding: 8px 12px; grid-column: 1 / -1; }
+.k-cls .kband { background: color-mix(in srgb, var(--c) 10%, var(--card)); border: 1.5px solid color-mix(in srgb, var(--c) 35%, transparent); }
+.k-hw .kband { background: color-mix(in srgb, var(--c) 8%, var(--card)); border: 1.5px dashed color-mix(in srgb, var(--c) 55%, transparent); }
+.kband b { color: var(--ci); }
+@media (prefers-color-scheme: dark) {
+  .klegend .k-cls { background: #2f1d12; color: #fdba74; border-color: #9a3412; }
+  .klegend .k-hw { background: #172038; color: #a5b4fc; border-color: #3b4f9c; }
+  .k-cls .kpill { background: transparent; color: #fdba74; border-color: #9a3412; }
+}
+
+/* ── 예시 보기 ── */
+.exbox { margin: 2px 0 8px; }
+.exbox summary { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; list-style: none; font-size: .84rem; font-weight: 700; color: var(--ci, var(--acc)); background: var(--cb, var(--acc-soft)); border-radius: 999px; padding: 3px 12px; }
+.exbox summary::-webkit-details-marker { display: none; }
+.exbox[open] summary { margin-bottom: 6px; }
+.exrow { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; background: var(--subtle); border: 1.5px dashed var(--line-strong); border-radius: 12px; padding: 8px 12px; margin: 0 0 6px; }
+.exrow p { margin: 0; font-size: .92rem; color: var(--text); white-space: pre-wrap; }
+.pchip { display: inline-flex; align-items: center; white-space: nowrap; font-size: .8rem; font-weight: 800; color: var(--text); background: var(--card); border: 1px solid var(--line-strong); border-radius: 999px; padding: 2px 10px; }
+.pchip small { font-weight: 500; color: var(--muted); }
+.people { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 14px 0; }
+.people > b { font-size: .9rem; color: var(--text); margin-right: 2px; }
+.people .pnote { flex-basis: 100%; color: var(--muted); font-size: .8rem; }
+
+/* ── 추천 사이트 ── */
+.links { background: var(--cb, var(--soft)); border-radius: var(--radius-md); padding: 14px 16px; margin: 16px 0; }
+.links h4 { margin: 0 0 8px; font-size: .98rem; font-weight: 800; }
+.lsec { margin-top: 8px; }
+.lhead { margin: 0 0 4px; font-size: .8rem; font-weight: 800; color: var(--ci, var(--muted)); }
+.links ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.links li { display: grid; grid-template-columns: minmax(150px, auto) 1fr; gap: 2px 10px; align-items: baseline; background: var(--card); border-radius: 10px; padding: 7px 12px; }
+.links li a { font-weight: 800; text-decoration: none; color: var(--ci, var(--acc)); }
+.links li a:hover { text-decoration: underline; }
+.links li span { font-size: .86rem; color: var(--body); }
+.links.compact ul { display: flex; flex-wrap: wrap; }
+.links.compact li { display: block; padding: 5px 12px; border-radius: 999px; }
+@media (max-width: 560px) { .links li { grid-template-columns: 1fr; } }
+
+/* ── 블룸 단계·대학 안내 ── */
+.bloom, .college { border-radius: var(--radius-md); padding: 12px 16px; margin: 16px 0; background: var(--card); border: 1.5px solid var(--line-strong); }
+.bloom summary, .college summary { cursor: pointer; font-weight: 800; color: var(--text); }
+.bloom p, .college p { margin: 8px 0 0; font-size: .92rem; }
+.blist { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 5px; }
+.blist li { display: grid; grid-template-columns: 62px 128px 1fr auto; gap: 4px 10px; align-items: center; border-radius: 10px; padding: 7px 10px; background: var(--subtle); font-size: .9rem; }
+.blist li.rec { background: var(--cb, var(--acc-soft)); box-shadow: inset 0 0 0 1.5px var(--c, var(--acc)); }
+.blist b { color: var(--text); }
+.blist .bd { color: var(--muted); font-size: .84rem; }
+.blist .bq { color: var(--text); }
+.blist em { font-style: normal; font-size: .74rem; font-weight: 800; color: var(--muted); white-space: nowrap; }
+.blist li.rec em { color: var(--ci, var(--acc)); }
+@media (max-width: 620px) { .blist li { grid-template-columns: 56px 1fr; } .blist .bq { grid-column: 1 / -1; } .blist em { grid-column: 2; justify-self: start; } }
+.cgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.cgrid > div { background: var(--subtle); border-radius: 12px; padding: 10px 12px; }
+.cgrid b { color: var(--text); }
+.cgrid p { margin: 4px 0 0; font-size: .86rem; }
+.cgrid .here { color: var(--acc); font-weight: 600; }
+.case { margin-top: 10px; background: var(--acc-soft); border-radius: 12px; padding: 10px 14px; }
+.case b { color: var(--text); }
+@media (max-width: 680px) { .cgrid { grid-template-columns: 1fr; } }
+
+/* ── 인쇄용 보고서 ── */
+.sheet + .sheet { margin-top: 18px; }
+.phead { display: grid; grid-template-columns: repeat(4, auto); gap: 0; border: 1.5px solid var(--text); border-radius: 10px; overflow: hidden; margin: 6px 0 12px; font-size: .9rem; }
+.phead span { padding: 6px 10px; border-right: 1px solid var(--line-strong); }
+.phead span:nth-child(odd) { background: var(--soft); font-weight: 700; color: var(--text); }
+.phead span.wide { grid-column: span 3; border-right: 0; border-top: 1px solid var(--line-strong); }
+.phead span.wl { border-top: 1px solid var(--line-strong); }
+.tview { margin-top: 14px; border: 1.5px solid var(--ok); border-radius: 12px; padding: 8px 12px; font-size: .9rem; }
+.tview b { color: var(--ok); }
+.tview p { margin: 3px 0; white-space: pre-wrap; }
+
+.ptab { width: 100%; border-collapse: collapse; margin: 8px 0 6px; font-size: .9rem; }
+.ptab th, .ptab td { border: 1px solid var(--line-strong); padding: 6px 10px; text-align: left; vertical-align: top; }
+.ptab th { width: 86px; background: var(--soft); color: var(--text); font-weight: 700; white-space: nowrap; }
+@media print { .ptab th { background: #f3f4f6 !important; } .ptab th, .ptab td { border-color: #bbb; } }
 /* 읽기 전용 보기 */
 .view h3 { font-size: 1.02rem; margin: 24px 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .view h3 .em { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: var(--cb); font-size: 1rem; }
@@ -413,10 +587,18 @@ table.st tr.sel { background: var(--acc-soft); }
 @media (max-width: 720px) { .tgrid { grid-template-columns: 1fr; } .view dl { grid-template-columns: 1fr; } .view dt { border-bottom: 0; padding-bottom: 2px; } .panel { padding: 18px 16px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 @media print {
-  body { background: #fff; font-size: 11pt; padding: 0 !important; }
+  body { background: #fff !important; color: #111; font-size: 10.5pt; padding: 0 !important; }
   .noprint, .bar, .nav, .prog, .toast, .demo, .bon-bar, .bon-footer, .confetti { display: none !important; }
-  .wrap { max-width: none; padding: 0; }
+  .wrap, .wrap.wide { max-width: none; padding: 0; }
   .panel { border: 0; padding: 0; box-shadow: none; }
+  .sheet { break-after: page; }
+  .sheet:last-child { break-after: auto; }
+  .sheet + .sheet { margin-top: 0; }
+  .view h3 { break-after: avoid; }
+  .view dt, .view dd { break-inside: avoid; }
+  .view h3 .em { background: none; }
+  .view dt { background: #f3f4f6 !important; }
+  .phead span:nth-child(odd) { background: #f3f4f6 !important; }
 }
 </style>
 </head>
@@ -424,8 +606,8 @@ table.st tr.sel { background: var(--acc-soft); }
 <nav class="bon-bar" aria-label="진로진학부 사이트"><div class="bon-bar-in"><a href="/">봉일천고등학교 진로진학부</a><span aria-current="page">진로 빌드업 맵 탐구 보고서</span></div></nav>
 <div id="app" class="wrap"></div>
 <footer class="wrap bon-footer noprint" id="foot">
-  <p>© 봉일천고등학교 진로진학부</p>
-  <p>2026학년도 1학년 중점 진로 활동</p>
+  <p>📘 진로 빌드업 맵 탐구 보고서 · 2026학년도 1학년 중점 진로 활동 · <a id="footlink" href="#teacher">선생님용 화면</a></p>
+  <p>© 봉일천고등학교 진로진학부 · 마지막 정리: 2026년 11월 11일</p>
 </footer>
 
 <script>
@@ -539,8 +721,12 @@ function answersView(d) {
   STAGES.forEach(function (st) {
     box.append(h("h3", { class: "c-" + st.id }, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), st.badge + " · " + st.title, h("small", { text: filled(d[st.id]) ? "저장 " + d[st.id] : "저장 전" })));
     const dl = h("dl", { class: "c-" + st.id });
-    fieldsOf(st).forEach(function (f) {
-      dl.append(h("dt", { text: f.label }), h("dd", { class: filled(d[f.key]) ? "" : "empty", text: filled(d[f.key]) ? String(d[f.key]) : "—" }));
+    const add = function (f, pre) {
+      dl.append(h("dt", { text: (pre ? pre + " · " : "") + f.label }), h("dd", { class: filled(d[f.key]) ? "" : "empty", text: filled(d[f.key]) ? String(d[f.key]) : "—" }));
+    };
+    st.blocks.forEach(function (b) {
+      if (b.t === "f") add(b);
+      else if (b.t === "card") b.fields.forEach(function (f) { add(f, b.title === "스스로 평가하기" ? "" : b.title.split(" · ")[0]); });
     });
     box.append(dl);
   });
@@ -600,12 +786,13 @@ function renderLogin() {
       h("section", { class: "panel" },
         h("h2", { text: "🧭 이렇게 진행해요" }),
         h("p", { class: "hint", text: "다섯 정거장을 하나씩 지나가요. 단계마다 저장하고, 다음에 이어서 쓰면 돼요." }),
+        kindLegend(),
         h("ol", { class: "flow" }, STAGES.map(function (st) {
-          return h("li", { class: "c-" + st.id }, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }),
-            h("b", null, h("small", { text: st.badge + (st.kind === "과제" ? " · 과제" : " · 수업") }), st.title), h("span", { text: st.goal + " · " + st.time }));
+          return h("li", { class: "c-" + st.id + " " + kcls(st) }, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }),
+            h("b", null, h("span", { class: "kpill", text: st.kind === "과제" ? "🏠 과제" : "🏫 수업" }), st.badge + " · " + st.title), h("span", { text: st.goal + " · " + st.time }));
         }))),
       form),
-    h("p", { class: "links" }, h("a", { href: "#teacher", text: "선생님용 화면" })));
+    h("div", { style: "margin-top:16px" }, collegeBox(false)));
 }
 function fieldEl(f) {
   const idv = "f_" + f.key;
@@ -622,6 +809,7 @@ function fieldEl(f) {
     h("label", { class: "fl", for: idv }, f.label, f.req ? h("span", { class: "req", text: "필수" }) : null),
     f.hint ? h("p", { class: "hint", text: f.hint }) : null,
     f.ph ? h("div", null, h("span", { class: "tpl", text: f.ph })) : null,
+    exBox(f),
     inp);
 }
 function markDirty() {
@@ -682,9 +870,9 @@ function renderNav() {
   if (!nav) return;
   put(nav, STAGES.map(function (st) {
     const n = stageStatus(S.data, st), s = STATUS[n];
-    return h("button", { type: "button", class: "c-" + st.id + " s" + n, "aria-current": st.id === S.cur ? "true" : null,
-      "aria-label": st.badge + " " + s[1], onclick: function () { goStage(st.id); } },
-      h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), h("b", { text: st.badge }), h("span", { text: s[1] }));
+    return h("button", { type: "button", class: "c-" + st.id + " s" + n + " " + kcls(st), "aria-current": st.id === S.cur ? "true" : null,
+      "aria-label": st.badge + "(" + st.kind + ") " + s[1], onclick: function () { goStage(st.id); } },
+      h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), h("b", { text: st.badge }), h("span", { text: (st.kind === "과제" ? "🏠 " : "🏫 ") + s[1] }));
   }));
   const pr = document.getElementById("prog");
   if (pr) {
@@ -731,6 +919,67 @@ function refBlock() {
     } }),
     h("p", { class: "hint", style: "margin:6px 0 0", text: "붙인 뒤에는 이음말을 넣고 어색한 곳을 다듬습니다." }));
 }
+function kcls(st) { return st.kind === "과제" ? "k-hw" : "k-cls"; }
+function kindLegend() {
+  return h("p", { class: "klegend" }, h("span", { class: "k-cls" }, "🏫 수업 시간에 해요"), h("span", { class: "k-hw" }, "🏠 집에서 해 오는 과제"));
+}
+function exBox(f) {
+  if (!f.ex) return null;
+  return h("details", { class: "exbox" }, h("summary", { text: "👀 예시 보기" }),
+    PEOPLE.map(function (p, i) {
+      return f.ex[i] ? h("div", { class: "exrow" }, h("span", { class: "pchip", text: p[0] + " " + p[1] }), h("p", { text: f.ex[i] })) : null;
+    }));
+}
+function peopleBox() {
+  return h("div", { class: "people" }, h("b", { text: "예시에 나오는 두 친구" }),
+    PEOPLE.map(function (p) { return h("span", { class: "pchip" }, p[0] + " " + p[1], h("small", { text: " · " + p[2] })); }),
+    h("small", { class: "pnote", text: "이해를 돕기 위해 지어낸 친구들이고, 예시 속 자료 내용도 형식을 보여 주려고 만든 것이에요." }));
+}
+function linksBox(compact) {
+  const out = h("div", { class: "links" + (compact ? " compact" : "") }, h("h4", null, h("i", { class: "ico", "aria-hidden": "true", text: "🔗" }), compact ? "자료 찾는 곳 (새 창으로 열려요)" : "자료는 여기서 찾아요 (누르면 새 창으로 열려요)"));
+  Object.keys(LINKS).forEach(function (sec) {
+    out.append(h("div", { class: "lsec" }, h("p", { class: "lhead", text: sec }),
+      h("ul", null, LINKS[sec].map(function (x) {
+        const ext = !/^\//.test(x[1]);
+        return h("li", null, h("a", { href: x[1], target: ext ? "_blank" : null, rel: ext ? "noopener" : null, text: x[0] + (ext ? " ↗" : " →") }), compact ? null : h("span", { text: x[2] }));
+      }))));
+  });
+  return out;
+}
+const BLOOM = [
+  ["1 기억", "사실 떠올리기", "간호사는 몇 시간씩 교대로 일할까?", "검색 한 번이면 끝나요"],
+  ["2 이해", "뜻과 까닭 설명하기", "교대 근무란 무엇이고 병원은 왜 교대 근무를 할까?", "1학년 추천"],
+  ["3 적용", "배운 것을 상황에 써 보기", "우리 가족이 밤 근무표대로 산다면 하루가 어떻게 바뀔까?", "1학년 추천"],
+  ["4 분석", "원인과 관계 나누어 보기", "야간 근무는 간호사의 건강에 어떤 영향을 줄까?", "1학년 추천"],
+  ["5 평가", "기준을 세워 판단하기", "지금의 교대 근무 방식은 간호사와 환자 모두에게 좋은 방식일까?", "도전"],
+  ["6 창안", "새로운 것 만들기", "간호사의 피로를 줄이는 근무표를 내가 만든다면?", "다음 탐구로"]
+];
+function bloomBox() {
+  return h("details", { class: "bloom" },
+    h("summary", null, h("i", { class: "ico", "aria-hidden": "true", text: "🔭" }), "질문 수준 올려 보기 · 블룸의 6단계"),
+    h("p", { text: "같은 주제라도 질문을 어떻게 묻느냐에 따라 탐구의 깊이가 달라져요. 1학년은 2~4단계 질문이 알맞아요. 1단계 질문은 검색 한 번이면 끝나서 탐구가 짧아지고, 5~6단계는 다음 탐구에서 도전해 봐요." }),
+    h("ol", { class: "blist" }, BLOOM.map(function (x) {
+      return h("li", { class: /추천/.test(x[3]) ? "rec" : "" }, h("b", { text: x[0] }), h("span", { class: "bd", text: x[1] }), h("span", { class: "bq", text: "🩺 " + x[2] }), h("em", { text: x[3] }));
+    })),
+    h("p", { class: "hint", style: "margin:8px 0 0" }, "더 알아보기: ", h("a", { href: "/matrix/", text: "블룸 교과탐구활동 매트릭스 →" }),
+      " 과목을 고르면 그 과목 성취기준에 맞는 탐구 활동과 '탐구 첫걸음' 예시(국어·수학·영어 등)를 볼 수 있어요."));
+}
+function collegeBox(open) {
+  return h("details", { class: "college", open: open ? true : null },
+    h("summary", null, h("i", { class: "ico", "aria-hidden": "true", text: "🎓" }), "이 활동, 대학은 어떻게 볼까요? (학생부종합전형)"),
+    h("p", { text: "학생부종합전형에서 대학은 학교생활기록부를 읽고 크게 세 가지 역량을 살펴요. 여러 대학의 학생부종합전형 가이드북이 이 세 가지 틀로 평가 방법을 설명해요." }),
+    h("div", { class: "cgrid" },
+      h("div", null, h("b", { text: "📘 학업역량" }), h("p", { text: "배운 것을 스스로 더 알아보려는 태도와 탐구력" }), h("p", { class: "here", text: "이 활동에서는 → 질문을 세우고, 믿을 만한 자료로 답을 찾는 과정" })),
+      h("div", null, h("b", { text: "🧭 진로역량" }), h("p", { text: "관심 분야를 탐색한 활동과 경험, 관련 과목을 고르려는 노력" }), h("p", { class: "here", text: "이 활동에서는 → 관심에서 출발한 질문, '더 배우고 싶은 과목'과 '다음 질문'" })),
+      h("div", null, h("b", { text: "🤝 공동체역량" }), h("p", { text: "협업과 소통, 배려, 맡은 일을 끝까지 하는 성실함" }), h("p", { class: "here", text: "이 활동에서는 → 발표하고 질문에 답하기, 친구들과 의견 나누기, 기한 지켜 제출하기" }))),
+    h("div", { class: "case" }, h("b", { text: "📝 학생부에는 이렇게 남을 수 있어요 (예시)" }),
+      h("p", { text: "병원 실습 영상을 보고 간호사의 근무 환경에 관심을 가져 '야간 교대 근무는 간호사의 건강에 어떤 영향을 줄까'라는 질문을 스스로 세움. 직업 정보와 신문 기사를 찾아 내용을 자신의 말로 정리하고, 처음 예상과 달리 근무 제도의 문제이기도 하다는 점을 근거를 들어 발표함. 친구의 질문을 계기로 다른 교대 근무 직업과 비교하는 다음 탐구를 계획함." }),
+      h("p", { class: "hint", style: "margin:6px 0 0", text: "어려운 지식을 많이 쓰는 것보다 '왜 궁금했고 → 어떻게 알아봤고 → 무엇이 달라졌는지'가 보이는 것이 중요해요. 학생부는 선생님이 실제로 본 활동만 기록해요." })),
+    h("p", { class: "hint", style: "margin:10px 0 0" }, "더 알아보기: ",
+      h("a", { href: "https://drive.google.com/file/d/1Xln5IVLgr7FpCeKdh7DBY4UTSKo5m1E3/view", target: "_blank", rel: "noopener", text: "2027 경희대 학생부종합 가이드북 ↗" }), " · ",
+      h("a", { href: "/jinhak/", text: "진로진학부 추천 자료의 대학별 가이드북 →" }), " · ",
+      h("a", { href: "https://snuarori.snu.ac.kr", target: "_blank", rel: "noopener", text: "서울대 웹진 아로리 ↗" })));
+}
 function blockEl(b) {
   if (b.t === "guide") return h("div", { class: "note" }, h("h4", null, h("i", { class: "ico", "aria-hidden": "true", text: b.title === "가이드" ? "🧭" : "📌" }), b.title), h("ul", null, b.items.map(function (x) { return h("li", { text: x }); })));
   if (b.t === "ex") return h("div", { class: "ex" }, h("h4", null, h("i", { class: "ico", "aria-hidden": "true", text: "👀" }), b.title), b.lines.map(function (l) { return h("p", null, l[0] ? h("b", { text: l[0] + "  " }) : null, l[1]); }));
@@ -741,10 +990,14 @@ function blockEl(b) {
   }
   if (b.t === "f") return fieldEl(b);
   if (b.t === "card") {
-    const ic = /자료 카드/.test(b.title) ? "🗂️" : /친구/.test(b.title) ? "🙋" : /평가/.test(b.title) ? "⭐" : "📝";
+    const ic = /자료 카드/.test(b.title) ? "🗂️" : /친구|피드백/.test(b.title) ? "🙋" : /평가/.test(b.title) ? "⭐" : "📝";
     return h("div", { class: "card" }, h("h4", null, h("i", { class: "ico", "aria-hidden": "true", text: ic }), b.title), h("div", null, b.fields.map(fieldEl)));
   }
   if (b.t === "ref") return refBlock();
+  if (b.t === "people") return peopleBox();
+  if (b.t === "links") return linksBox(b.compact);
+  if (b.t === "bloom") return bloomBox();
+  if (b.t === "college") return collegeBox(true);
   return null;
 }
 function renderStudent() {
@@ -765,29 +1018,76 @@ function renderStudent() {
       h("div", null, h("b", { text: "🏁 다섯 정거장을 모두 지났어요!" }), h("span", { text: "보고서를 완성했어요. '전체 보기·인쇄'로 내 보고서를 한눈에 볼 수 있어요." }))) : null,
     h("div", { id: "prog", class: "prog" }),
     h("div", { id: "nav", class: "nav" }),
-    h("div", { class: "panel stage c-" + st.id },
+    h("div", { class: "panel stage c-" + st.id + " " + kcls(st) },
       h("div", { class: "shead" },
         h("span", { class: "big", "aria-hidden": "true", text: LOOK[st.id] }),
         h("span", { class: "tag" + (st.kind === "과제" ? " hw" : ""), text: st.kind === "과제" ? "🏠 " + st.badge + " · 집에서 해 와요" : "🏫 " + st.badge + " · 수업 시간" }),
         h("h2", { text: st.title }),
-        h("p", null, h("b", { text: "🎯 목표 " }), st.goal + "  ·  ⏱ " + st.time)),
+        h("p", null, h("b", { text: "🎯 목표 " }), st.goal + "  ·  ⏱ " + st.time),
+        h("div", { class: "kband" }, st.kind === "과제"
+          ? [h("b", { text: "🏠 집에서 해 오는 과제예요." }), " 다음 수업 전까지 이 단계를 채우고 💾 저장해요. 학교 컴퓨터실이나 휴대폰으로 해도 돼요."]
+          : [h("b", { text: "🏫 수업 시간에 하는 단계예요." }), " 선생님 안내에 맞춰 함께 쓰고, 끝나기 전에 💾 저장해요."])),
       teacherNote(st),
       st.blocks.map(blockEl)),
     h("div", { id: "bar", class: "bar noprint" }));
   renderNav(); renderBar();
 }
-function renderAll() {
+/* ---------- 인쇄: 머리말(제목·학생)·꼬리말(출력 일시·쪽수)은 @page 여백 칸에 넣는다 ---------- */
+let PRINT_WHO = "";
+function nowStr() {
+  const d = new Date(), z = function (n) { return String(n).padStart(2, "0"); };
+  return d.getFullYear() + ". " + (d.getMonth() + 1) + ". " + d.getDate() + ". " + z(d.getHours()) + ":" + z(d.getMinutes());
+}
+function setPrintMeta(who) {
+  let el = document.getElementById("printmeta");
+  if (!el) { el = h("style", { id: "printmeta" }); document.head.append(el); }
+  const q = function (x) { return '"' + String(x).replace(/["\\\n]/g, " ") + '"'; };
+  const small = "font-family: 'Pretendard Variable', Pretendard, 'Malgun Gothic', sans-serif; font-size: 8.5pt; color: #555;";
+  el.textContent = "@page { size: A4; margin: 17mm 14mm 16mm; " +
+    "@top-left { content: " + q("진로 빌드업 맵 탐구 보고서 · 봉일천고 1학년") + "; " + small + " } " +
+    "@top-right { content: " + q(who || "") + "; " + small + " } " +
+    "@bottom-left { content: " + q("출력 " + nowStr() + " · 봉일천고등학교 진로진학부") + "; " + small + " } " +
+    "@bottom-right { content: counter(page) \" / \" counter(pages) \" 쪽\"; " + small + " } }";
+}
+window.addEventListener("beforeprint", function () {
+  setPrintMeta(PRINT_WHO || (S.id ? S.id + " " + S.name : ""));
+  document.querySelectorAll(".pdate").forEach(function (e) { e.textContent = nowStr(); });
+});
+function sheet(rec, teacher) {
+  const stages = STAGES.map(function (st) { return st.badge + " " + STATUS[stageStatus(rec, st)][0]; }).join("  ");
+  const sec = h("section", { class: "sheet" },
+    h("h2", { style: "margin:0 0 4px; font-size:1.3rem", text: "📘 진로 빌드업 맵 탐구 보고서" }),
+    h("table", { class: "ptab" },
+      h("tr", null, h("th", { text: "학번" }), h("td", { text: rec.id || "" }), h("th", { text: "이름" }), h("td", { text: rec.name || "" })),
+      h("tr", null, h("th", { text: "관심 진로" }), h("td", { text: rec.career || "" }), h("th", { text: "출력 일시" }), h("td", { class: "pdate", text: nowStr() })),
+      h("tr", null, h("th", { text: "탐구 질문" }), h("td", { colspan: "3", text: rec.question || "" })),
+      h("tr", null, h("th", { text: "진행" }), h("td", { colspan: "3", text: stages }))),
+    answersView(rec));
+  if (teacher) {
+    const lines = [1, 2, 3].map(function (n) {
+      return h("p", null, h("b", { text: "확인 " + "①②③"[n - 1] + " " }), (filled(rec["t_c" + n]) ? "확인" : "—") + (filled(rec["t_f" + n]) ? " · " + rec["t_f" + n] : ""));
+    });
+    sec.append(h("div", { class: "tview" }, h("p", null, h("b", { text: "선생님 기록" })), lines,
+      rubText(rec) ? h("p", null, h("b", { text: "기준표 " }), rubText(rec)) : null,
+      filled(rec.t_memo) ? h("p", null, h("b", { text: "관찰 메모 " }), String(rec.t_memo)) : null));
+  }
+  return sec;
+}
+function renderPrint(recs, who, back, teacher) {
+  PRINT_WHO = who;
   document.body.classList.remove("has-bar");
-  $app.className = "wrap";
-  put($app, 
+  window.scrollTo(0, 0);
+  put($app,
     h("div", { class: "top noprint" },
-      h("h1", { text: "📖 내 보고서 전체 보기" }),
-      h("button", { class: "btn small", type: "button", text: "🖨️ 인쇄", onclick: function () { window.print(); } }),
-      h("button", { class: "btn ghost small", type: "button", text: "돌아가기", onclick: renderStudent })),
-    h("div", { class: "panel" },
-      h("h2", { style: "margin:0 0 4px", text: "진로 빌드업 맵 탐구 보고서" }),
-      h("p", { class: "hint", text: S.id + " " + S.name }),
-      answersView(S.data)));
+      h("h1", { text: "📖 보고서 미리보기" + (recs.length > 1 ? " (" + recs.length + "명)" : "") }),
+      h("button", { class: "btn small", type: "button", text: "🖨️ 인쇄", onclick: function () { setPrintMeta(who); window.print(); } }),
+      h("button", { class: "btn ghost small", type: "button", text: "돌아가기", onclick: function () { PRINT_WHO = ""; back(); } })),
+    h("p", { class: "hint noprint", text: "인쇄하면 쪽마다 위에 보고서 이름과 학생, 아래에 출력 일시와 쪽수가 들어가요. 인쇄 창의 '머리글과 바닥글'은 끄면 깔끔해요. 학생마다 새 쪽에서 시작해요." }),
+    h("div", { class: "panel" }, recs.map(function (r) { return sheet(r, teacher); })));
+}
+function renderAll() {
+  const rec = Object.assign({}, S.data, { id: S.id, name: S.name });
+  renderPrint([rec], S.id + " " + S.name, renderStudent, false);
 }
 window.addEventListener("beforeunload", function (e) { if (S.dirty) { e.preventDefault(); e.returnValue = ""; } });
 
@@ -811,7 +1111,7 @@ function renderTeacherLogin() {
       try { T.pw = pw.value; await loadRows(); renderTeacher(); }
       catch (e) { T.pw = ""; toast(e.message, true); go.disabled = false; }
     } }, h("label", { class: "fl", for: "tpw", text: "교사 비밀번호" }), pw, h("div", { style: "margin-top:16px" }, go)),
-    h("p", { class: "links", style: "text-align:left" }, h("a", { href: "#", text: "학생용 화면으로" })));
+    null);
 }
 async function loadRows() {
   const out = await api({ action: "teacher_list", tpw: T.pw });
@@ -832,7 +1132,10 @@ function renderTeacher() {
     h("div", { class: "top" }, h("h1", { text: "탐구 보고서 · 선생님용" }),
       h("button", { class: "btn ghost small", type: "button", text: "새로 고침", onclick: async function () { try { await loadRows(); renderTeacher(); toast("새로 불러왔습니다."); } catch (e) { toast(e.message, true); } } })),
     DEMO ? h("div", { class: "demo" }, h("b", { text: "미리보기 모드 " }), "이 기기에 저장된 연습 자료입니다.") : null,
-    h("div", { class: "tools" }, sel, h("div", { class: "tabs", role: "tablist" }, tabBtn("status", "제출 현황·확인"), tabBtn("summary", "학생부 작성용 요약"))),
+    h("div", { class: "tools" }, sel, h("div", { class: "tabs", role: "tablist" }, tabBtn("status", "제출 현황·확인"), tabBtn("summary", "학생부 작성용 요약")),
+      shownRows().length ? h("button", { class: "btn ghost small", type: "button", text: "🖨️ 보이는 학생 모두 인쇄 (" + shownRows().length + "명)", onclick: function () {
+        const rs = shownRows(); renderPrint(rs, (T.cls ? clsName(T.cls) : "전체") + " " + rs.length + "명", renderTeacher, true);
+      } }) : null),
     T.tab === "status" ? statusTab() : summaryTab());
 }
 function statusTab() {
@@ -895,7 +1198,8 @@ function detailPanel(r) {
     catch (e) { toast(e.message, true); }
   } });
   return h("div", { class: "panel", id: "detail" },
-    h("div", { class: "dhead" }, h("h2", { text: r.id + " " + r.name }), reset),
+    h("div", { class: "dhead" }, h("h2", { text: r.id + " " + r.name }),
+      h("button", { class: "btn ghost small", type: "button", text: "🖨️ 이 학생 보고서 인쇄", onclick: function () { renderPrint([r], r.id + " " + r.name, renderTeacher, true); } }), reset),
     h("div", { class: "tgrid" }, left, right),
     h("div", { style: "margin:16px 0 4px" }, save),
     answersView(r));
@@ -939,7 +1243,10 @@ function summaryTab() {
 
 /* ---------- 시작 ---------- */
 function route() {
-  document.body.classList.toggle("is-wide", location.hash === "#teacher");
+  const tch = location.hash === "#teacher";
+  document.body.classList.toggle("is-wide", tch);
+  const fl = document.getElementById("footlink");
+  if (fl) { fl.href = tch ? "#" : "#teacher"; fl.textContent = tch ? "학생용 화면" : "선생님용 화면"; }
   if (location.hash === "#teacher") { if (T.pw) renderTeacher(); else renderTeacherLogin(); }
   else if (S.id) renderStudent(); else renderLogin();
 }
