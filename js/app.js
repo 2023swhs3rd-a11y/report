@@ -138,6 +138,12 @@ function startBrowse() {
   S.browse = true; S.id = ""; S.name = ""; S.pin = ""; S.data = {}; S.cur = "s1"; S.dirty = false;
   renderStudent(); window.scrollTo(0, 0);
 }
+function goHome() { leaveStudent(); window.scrollTo(0, 0); }
+function goLogin() {
+  leaveStudent();
+  const id = document.getElementById("lid");
+  if (id) { id.closest("form").scrollIntoView({ block: "center" }); id.focus({ preventScroll: true }); }
+}
 function leaveStudent() {
   /* 공용 컴퓨터를 생각해 이 기기에 남은 임시 저장과 화면의 글을 지운다 */
   if (S.id) store("bum_draft_" + S.id, null);
@@ -380,7 +386,8 @@ function renderBar() {
     put(bar, h("div", { class: "bar-in" },
       h("span", { class: "state", text: "👀 둘러보기 · 저장되지 않아요" }),
       i < STAGES.length - 1 ? h("button", { class: "btn ghost", type: "button", text: "다음 " + LOOK[STAGES[i + 1].id], onclick: function () { goStage(STAGES[i + 1].id); } }) : null,
-      h("button", { class: "btn", type: "button", text: "🔑 로그인하기", onclick: leaveStudent })));
+      h("button", { class: "btn ghost", type: "button", text: "🏠 처음", "aria-label": "처음 화면으로", onclick: goHome }),
+      h("button", { class: "btn", type: "button", text: "🔑 로그인", onclick: goLogin })));
     return;
   }
   put(bar, h("div", { class: "bar-in" },
@@ -502,14 +509,17 @@ function renderStudent() {
       h("h1", { text: "진로 빌드업 맵 탐구 보고서" }),
       S.browse ? h("span", { class: "who browse", text: "👀 둘러보기 중" }) : h("span", { class: "who", text: "🙂 " + S.id + " " + S.name }),
       h("button", { class: "btn ghost small", type: "button", text: "전체 보기·인쇄", onclick: async function () { if (S.dirty && !(await saveStage(true))) return; renderAll(); } }),
+      S.browse ? h("button", { class: "btn ghost small", type: "button", text: "🏠 처음 화면으로", onclick: goHome }) : null,
       h("button", { class: "btn ghost small", type: "button", text: S.browse ? "🔑 로그인" : "나가기", onclick: function () {
+        if (S.browse) return goLogin();
         if (S.dirty && !confirm("저장하지 않은 내용은 지워집니다. 그래도 나갈까요?")) return;
         leaveStudent();
       } })),
     demoBanner(),
     S.browse ? h("div", { class: "browsing" }, h("b", { text: "👀 둘러보기 중이에요." }),
       " 다섯 단계와 예시를 모두 볼 수 있고 칸에 써 볼 수도 있지만, 저장되지 않아요. 내 보고서를 쓰려면 ",
-      h("button", { class: "linkbtn", type: "button", text: "로그인", onclick: leaveStudent }), "하세요.") : null,
+      h("button", { class: "linkbtn", type: "button", text: "로그인", onclick: goLogin }), "하고, 처음 소개로 돌아가려면 ",
+      h("button", { class: "linkbtn", type: "button", text: "처음 화면으로", onclick: goHome }), " 가요.") : null,
     !S.browse && doneCount() === STAGES.length ? h("div", { class: "finish" }, h("img", { src: "img/done.svg?v=1", alt: "" }),
       h("div", null, h("b", { text: "🏁 다섯 정거장을 모두 지났어요!" }), h("span", { text: "보고서를 완성했어요. '전체 보기·인쇄'로 내 보고서를 한눈에 볼 수 있어요." }))) : null,
     h("div", { id: "prog", class: "prog" }),

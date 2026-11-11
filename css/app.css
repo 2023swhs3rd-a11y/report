@@ -380,6 +380,14 @@ body.has-bar { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 .tlogin form { text-align: left; margin-top: 16px; }
 .tlogin .demo { text-align: left; }
 
+/* 좁은 화면: 저장 상태 글은 버튼 위 한 줄로, 버튼은 같은 너비로 */
+@media (max-width: 560px) {
+  .bar-in { flex-wrap: wrap; row-gap: 4px; padding-top: 6px; }
+  .bar-in .state { flex-basis: 100%; text-align: center; font-size: .8rem; }
+  .bar-in .btn { flex: 1 1 0; padding: 0 10px; min-width: 0; }
+  body.has-bar { padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px)); }
+}
+
 /* 읽기 전용 보기 */
 .view h3 { font-size: 1.02rem; margin: 24px 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .view h3 .em { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: var(--cb); font-size: 1rem; }
