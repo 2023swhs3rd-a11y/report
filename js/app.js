@@ -306,13 +306,17 @@ function fieldEl(f) {
       inp.value = withJosa(t, w); set(inp.value); inp.focus();
     } });
   }));
-  const tag = f.req ? h("span", { class: "req", text: "필수" }) : f.challenge ? h("span", { class: "req ch", text: "🚀 도전" }) : f.link ? h("span", { class: "req lk", text: "🔗 연결" }) : null;
-  return h("div", { class: "fwrap" + (f.challenge ? " challenge" : "") + (f.link ? " linked" : "") },
-    f.kind === "select" ? h("p", { class: "fl" }, f.label, tag) : h("label", { class: "fl", for: idv }, f.label, tag),
+  const tag = f.req ? h("span", { class: "req must", text: "필수" }) : f.challenge ? h("span", { class: "req ch", text: "🚀 도전" }) : f.link ? h("span", { class: "req lk", text: "🔗 연결" }) : h("span", { class: "req opt", text: "선택" });
+  /* 질문 카드: 질문(제목·설명) → 예시(참고) → 내 답(가장 뚜렷하게) 순서로 구역을 나눈다 */
+  return h("div", { class: "fwrap" + (f.req ? " isreq" : "") + (f.challenge ? " challenge" : "") + (f.link ? " linked" : "") + (filled(val) ? " done" : ""), "data-k": f.key },
+    h("div", { class: "qhead" },
+      f.kind === "select" ? h("p", { class: "fl" }, f.label, tag) : h("label", { class: "fl", for: idv }, f.label, tag),
+      h("span", { class: "qdone", "aria-hidden": "true", text: "✓ 썼어요" })),
     f.hint ? h("p", { class: "hint", text: f.hint }) : null,
-    f.ph ? h("div", null, h("span", { class: "tpl", text: f.ph })) : null,
     exBox(f),
-    inp, helper);
+    h("div", { class: "ans" },
+      h("p", { class: "anslabel" }, f.kind === "select" ? "👆 하나 골라요" : "✏️ 내 답", f.ph ? h("span", { class: "tpl", text: f.ph }) : null),
+      inp, helper));
 }
 /* 이 단계의 필수 칸과 도전 과제 */
 function reqItems(st) {
@@ -325,17 +329,41 @@ function reqItems(st) {
 }
 function levelsBox(st) {
   const items = reqItems(st);
-  return h("div", { class: "levels" },
-    h("div", { class: "lv base" }, h("b", { text: "🌱 이것만 하면 완성" }), h("span", { class: "lcnt", id: "reqcnt" }),
-      h("ul", { id: "reqlist" }, items.map(function (x) { return h("li", { "data-k": x[0], text: x[1] }); }))),
+  return h("div", { class: "levels one" },
+    h("div", { class: "lv base" }, h("b", { text: "✅ 이 단계에서 할 일" }), h("span", { class: "lcnt", id: "reqcnt" }),
+      h("p", { class: "lvhint", text: "아래 '필수' 칸만 쓰고 💾 저장하면 이 단계 완성이에요. 누르면 그 칸으로 가요." }),
+      h("ul", { id: "reqlist" }, items.map(function (x) { return h("li", { "data-k": x[0] }, h("button", { type: "button", class: "linkbtn", text: x[1], onclick: function () { jumpTo(x[0]); } })); }))));
+}
+/* 가이드·더 해 보기·예시 친구 소개는 접어 둔다(첫 질문이 빨리 보이게) */
+function moreInfo(st, lead) {
+  return h("details", { class: "moreinfo" },
+    h("summary", null, h("span", { text: "📖 안내 더 보기" }), h("small", { text: "가이드 · 더 해 보고 싶다면 · 예시 친구" })),
+    lead.map(blockEl),
     st.more ? h("div", { class: "lv more" }, h("b", { text: "🚀 더 해 보고 싶다면" }),
       h("ul", null, st.more.map(function (m) { return h("li", { text: m }); }))) : null);
+}
+function jumpTo(k) {
+  const el = document.querySelector('.fwrap[data-k="' + k + '"]');
+  if (!el) return;
+  for (let p = el.parentElement; p; p = p.parentElement) if (p.tagName === "DETAILS") p.open = true;
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+  const inp = el.querySelector("textarea, input, .seg button");
+  if (inp) inp.focus({ preventScroll: true });
+}
+function nextReq() {
+  const st = STAGES.find(function (s) { return s.id === S.cur; });
+  const left = reqItems(st).filter(function (x) { return !filled(S.data[x[0]]); });
+  if (left.length) jumpTo(left[0][0]);
 }
 function updReq() {
   const ul = document.getElementById("reqlist"); if (!ul) return;
   let n = 0, all = 0;
   ul.querySelectorAll("li").forEach(function (li) { const ok = filled(S.data[li.dataset.k]); li.classList.toggle("ok", ok); all++; if (ok) n++; });
   const c = document.getElementById("reqcnt"); if (c) c.textContent = n + " / " + all + (n === all ? " · 저장하면 완성! 🎉" : "");
+  document.querySelectorAll(".fwrap[data-k]").forEach(function (el) { el.classList.toggle("done", filled(S.data[el.dataset.k])); });
+  const nb = document.getElementById("nextreq");
+  if (nb) { nb.textContent = n === all ? "필수 " + n + "/" + all + " 🎉" : "필수 " + n + "/" + all + " · 빈 칸 ↓"; nb.disabled = n === all; }
 }
 function markDirty() {
   updReq();
@@ -480,6 +508,7 @@ function renderBar() {
       const txt = pend ? "📶 기기에 보관 중 · 연결되면 자동 전송" : S.dirty ? "✋ 저장 안 됨 · 1분 뒤 자동 저장" : saved ? (S.autoAt ? "✅ 자동 저장됨 · " : "✅ 저장됨 · ") + saved : "아직 저장 전";
       return h("span", { id: "savestate", class: "state" + (pend || S.dirty ? " dirty" : saved ? " ok" : ""), role: "status", text: txt });
     })(),
+    h("button", { id: "nextreq", class: "btn ghost todo-btn", type: "button", "aria-label": "아직 안 쓴 필수 칸으로 가기", onclick: nextReq }),
     i < STAGES.length - 1 ? h("button", { class: "btn ghost", type: "button", text: "다음 " + LOOK[STAGES[i + 1].id], onclick: function () { goStage(STAGES[i + 1].id); } }) : null,
     h("button", { id: "savebtn", class: "btn", type: "button", text: "💾 저장하기", onclick: function () { saveStage(false); } })));
 }
@@ -513,7 +542,7 @@ function kindLegend() {
 }
 function exBox(f) {
   if (!f.ex) return null;
-  return h("details", { class: "exbox", open: true }, h("summary", { text: "👀 예시" }),
+  return h("details", { class: "exbox", open: true }, h("summary", null, "👀 예시", h("small", { text: " 참고만 해요 · 누르면 접혀요" })),
     PEOPLE.map(function (p, i) {
       return f.ex[i] ? h("div", { class: "exrow" }, h("span", { class: "pchip", text: p[0] + " " + p[1] }), h("p", { text: f.ex[i] })) : null;
     }));
@@ -639,9 +668,12 @@ function renderStudent() {
         h("div", { class: "kband" }, st.kind === "과제"
           ? [h("b", { text: "🏠 집에서 해 오는 과제예요." }), " 다음 수업 전까지 이 단계를 채우고 💾 저장해요. 학교 컴퓨터실이나 휴대폰으로 해도 돼요."]
           : [h("b", { text: "🏫 수업 시간에 하는 단계예요." }), " 선생님 안내에 맞춰 함께 쓰고, 끝나기 전에 💾 저장해요."])),
-      teacherNote(st),
-      levelsBox(st),
-      st.blocks.map(blockEl)),
+      (function () {
+        /* 맨 앞의 '가이드'와 예시 친구 소개는 '안내 더 보기'로 접는다 */
+        let n = 0;
+        while (n < st.blocks.length && ((st.blocks[n].t === "guide" && st.blocks[n].title === "가이드") || st.blocks[n].t === "people")) n++;
+        return [levelsBox(st), teacherNote(st), moreInfo(st, st.blocks.slice(0, n))].concat(st.blocks.slice(n).map(blockEl));
+      })()),
     h("div", { id: "bar", class: "bar noprint" }));
   renderNav(); renderBar(); updReq();
 }

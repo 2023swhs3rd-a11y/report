@@ -493,3 +493,61 @@ details.fold > .fwrap.challenge { padding-top: 0; }
   .lockb { background: #3b1414; color: #fca5a5; }
 }
 @media (prefers-color-scheme: dark) { h3.step .no { color: var(--card); background: var(--c); } }
+
+/* ================= 질문 카드 (2026-11 화면 정리) =================
+   질문 하나 = 카드 하나. 카드 안은 질문(제목·설명) → 예시(연하게) → 내 답(가장 뚜렷하게) 순서 */
+.stage > .fwrap:not(.linked), details.fold > .fwrap { margin: 16px 0; padding: 14px 16px 16px; background: var(--card); border: 1.5px solid var(--line-strong); border-radius: var(--radius-md); }
+.stage > .fwrap.isreq:not(.linked) { border-left: 6px solid var(--c, var(--acc)); }
+.stage > .fwrap.done.isreq:not(.linked) { border-left-color: var(--ok); }
+.card .fwrap { padding: 14px 0 4px; }
+.card .fwrap + .fwrap { border-top: 1.5px dashed var(--line); margin-top: 12px; }
+.fwrap .qhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.fwrap .fl { margin: 0 0 4px; font-size: 1.04rem; flex-wrap: wrap; line-height: 1.45; }
+.fwrap.linked .fl { margin-top: 14px; }
+.fwrap .hint { margin: 0 0 8px; }
+.req.must { color: #fff; background: var(--ci, var(--acc)); padding: 2px 9px; }
+.req.opt { color: var(--muted); background: var(--soft); font-weight: 700; }
+.card .req.opt { display: none; }
+.qdone { display: none; flex: none; font-size: .76rem; font-weight: 800; color: var(--ok); background: var(--ok-soft); border-radius: 999px; padding: 2px 9px; white-space: nowrap; margin-top: 2px; }
+.fwrap.linked .qdone { margin-top: 16px; }
+.fwrap.done .qdone { display: inline-block; }
+/* 예시: 참고 자료라서 작고 연하게 */
+.fwrap .exbox { margin: 0 0 10px; }
+.fwrap .exbox summary { font-size: .8rem; color: var(--muted); background: transparent; padding: 2px 0; min-height: 28px; border-radius: 0; }
+.fwrap .exbox summary small { font-weight: 500; }
+.fwrap .exbox[open] summary { margin-bottom: 2px; }
+.fwrap .exrow { background: var(--soft); border: 0; border-radius: 10px; padding: 6px 10px; margin: 0 0 4px; }
+.fwrap .exrow p { font-size: .86rem; color: var(--body); line-height: 1.55; }
+.fwrap .exrow .pchip { font-size: .72rem; font-weight: 700; color: var(--muted); padding: 1px 8px; }
+/* 내 답: 색 테두리와 이름표로 '여기에 쓴다'를 분명히 */
+.ans { border: 2px solid color-mix(in srgb, var(--c, var(--acc)) 55%, var(--line)); border-radius: 14px; background: color-mix(in srgb, var(--cb, var(--acc-soft)) 45%, var(--card)); padding: 8px 12px 12px; }
+.fwrap:not(.isreq) .ans { border-width: 1.5px; border-color: var(--line-strong); background: var(--subtle); }
+.anslabel { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 6px; font-size: .86rem; font-weight: 800; color: var(--ci, var(--acc)); }
+.fwrap:not(.isreq) .anslabel { color: var(--muted); }
+.anslabel .tpl { margin: 0; font-weight: 500; background: var(--card); border: 1px solid var(--line); }
+.tpl::before { content: "💬 문장 틀"; }
+.ans .pick { margin-top: 8px; }
+.fwrap.flash { animation: qflash 1.2s ease-out; }
+@keyframes qflash { 0%, 40% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--c, var(--acc)) 45%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .fwrap.flash { animation: none; outline: 3px solid var(--c, var(--acc)); } }
+/* 이 단계에서 할 일 + 안내 더 보기 */
+.levels.one { grid-template-columns: 1fr; margin-top: 16px; }
+.lv .lvhint { margin: 4px 0 2px; color: var(--muted); font-size: .86rem; }
+.lv.base li .linkbtn { color: var(--text); font-weight: 600; text-decoration: none; text-align: left; min-height: 30px; }
+.lv.base li .linkbtn:hover { text-decoration: underline; }
+.lv.base li.ok .linkbtn { color: var(--muted); text-decoration: line-through; }
+details.moreinfo { margin: 12px 0 4px; border: 1.5px dashed var(--line-strong); border-radius: var(--radius-md); }
+details.moreinfo > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 10px 14px; min-height: 44px; font-weight: 700; color: var(--body); }
+details.moreinfo > summary::-webkit-details-marker { display: none; }
+details.moreinfo > summary::before { content: "▸"; color: var(--muted); }
+details.moreinfo[open] > summary::before { content: "▾"; }
+details.moreinfo > summary small { font-weight: 500; color: var(--muted); font-size: .82rem; }
+details.moreinfo > :not(summary) { margin: 0 12px 12px; }
+.todo-btn { white-space: nowrap; }
+.todo-btn:disabled { opacity: .75; cursor: default; }
+@media (max-width: 560px) {
+  .stage > .fwrap:not(.linked), details.fold > .fwrap { padding: 12px 12px 14px; }
+  .ans { padding: 8px 10px 10px; }
+  .bar-in .btn { font-size: .86rem; padding: 0 6px; }
+}
+@media print { details.moreinfo, .qdone, .anslabel { display: none; } }
