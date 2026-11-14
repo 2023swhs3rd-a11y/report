@@ -551,3 +551,4 @@ details.moreinfo > :not(summary) { margin: 0 12px 12px; }
   .bar-in .btn { font-size: .86rem; padding: 0 6px; }
 }
 @media print { details.moreinfo, .qdone, .anslabel { display: none; } }
+@media (prefers-color-scheme: dark) { .req.must { color: var(--card); } }
