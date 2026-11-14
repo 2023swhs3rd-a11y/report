@@ -552,3 +552,15 @@ details.moreinfo > :not(summary) { margin: 0 12px 12px; }
 }
 @media print { details.moreinfo, .qdone, .anslabel { display: none; } }
 @media (prefers-color-scheme: dark) { .req.must { color: var(--card); } }
+/* 접힌 안내 상자: 오른쪽에 '펼치기' 표시 */
+.bloom summary, .college summary { list-style: none; flex-wrap: wrap; }
+.bloom summary::-webkit-details-marker, .college summary::-webkit-details-marker { display: none; }
+summary .more { margin-left: auto; font-size: .82rem; font-weight: 700; color: var(--acc); background: var(--acc-soft); border-radius: 999px; padding: 3px 12px; white-space: nowrap; }
+summary .more::after { content: "펼치기 ▾"; }
+details[open] > summary .more::after { content: "접기 ▴"; }
+/* 단계 맨 아래: 저장하고 다음으로 */
+.stage-end { margin: 28px 0 4px; padding: 18px 16px; border-top: 2px dotted var(--line-strong); text-align: center; }
+.stage-end p { margin: 0 0 10px; color: var(--muted); font-size: .92rem; }
+.stage-end .btn { min-height: 52px; padding: 0 22px; font-size: 1.02rem; max-width: 100%; white-space: normal; line-height: 1.35; }
+.nav .kemo { font-style: normal; }
+@media (max-width: 560px) { .nav .kemo { display: none; } }

@@ -233,7 +233,7 @@ function renderLogin() {
         h("p", { class: "lead", text: "내가 궁금한 것을 질문 하나로 만들고, 자료를 찾아 내 힘으로 답해 보는 활동이에요. 정답은 없어요!" }),
         h("ul", { class: "chips" }, h("li", { text: "🏫 수업 3번 + 🏠 과제 2번" }), h("li", { text: "💾 단계마다 저장" }), h("li", { text: "🙆 정답 없음" })),
         h("button", { class: "btn ghost browse-btn", type: "button", text: "👀 로그인 없이 둘러보기", onclick: startBrowse })),
-      h("img", { class: "art", src: "img/map.svg?v=1", width: "620", height: "380", alt: "탐구 지도: 출발해서 다섯 정거장을 지나 도착 깃발까지 가는 그림" })),
+      h("img", { class: "art", src: "img/map.svg?v=2", width: "620", height: "380", alt: "탐구 지도: 출발해서 다섯 정거장을 지나 도착 깃발까지 가는 그림" })),
     demoBanner(),
     h("div", { class: "login" },
       h("section", { class: "panel" },
@@ -353,6 +353,18 @@ function jumpTo(k) {
   el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
   const inp = el.querySelector("textarea, input, .seg button");
   if (inp) inp.focus({ preventScroll: true });
+}
+/* 단계 맨 아래: 저장하고 다음 단계로 (마지막 단계는 저장하고 전체 보기) */
+function stageEnd(st) {
+  const i = STAGES.indexOf(st), next = STAGES[i + 1];
+  return h("div", { class: "stage-end noprint" },
+    h("p", { text: next ? "여기까지 썼으면 저장하고 다음 단계로 가요. 다 못 썼어도 괜찮아요. 나중에 돌아와서 이어 쓸 수 있어요." : "마지막 단계예요. 저장하고 내 보고서 전체를 확인해요." }),
+    h("button", { class: "btn big", type: "button",
+      text: next ? "💾 저장하고 다음으로 넘어가기 → " + next.badge + " " + next.nick : "💾 저장하고 내 보고서 전체 보기",
+      onclick: async function () {
+        if (next) { await goStage(next.id); return; }
+        if (await saveStage(false)) renderAll();
+      } }));
 }
 function nextReq() {
   const st = STAGES.find(function (s) { return s.id === S.cur; });
@@ -479,7 +491,7 @@ function renderNav() {
     const n = stageStatus(S.data, st), s = STATUS[n];
     return h("button", { type: "button", class: "c-" + st.id + " s" + n + " " + kcls(st), "aria-current": st.id === S.cur ? "true" : null,
       "aria-label": st.badge + " " + st.nick + "(" + st.kind + ") " + s[1], onclick: function () { goStage(st.id); } },
-      h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), h("b", { text: st.nick }), h("span", { text: st.badge + " · " + s[1] }));
+      h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), h("b", { text: st.nick }), h("span", null, h("i", { class: "kemo", "aria-hidden": "true", text: st.kind === "과제" ? "🏠 " : "🏫 " }), st.badge + " · " + s[1]));
   }));
   const pr = document.getElementById("prog");
   if (pr) {
@@ -527,9 +539,9 @@ function teacherNote(st) {
 function refBlock() {
   const keys = ["r1", "r2", "r3", "r4", "r5", "r6", "r7"];
   const have = keys.filter(function (k) { return filled(S.data[k]); });
-  if (!have.length) return h("div", { class: "tfb wait", text: "🧩 2차시의 ①~⑦을 먼저 저장하면 여기에 불러올 수 있어요." });
+  if (!have.length) return h("div", { class: "tfb wait", text: "🧩 3단계의 ①~⑦을 먼저 저장하면 여기에 불러올 수 있어요." });
   return h("details", { class: "ref", open: true },
-    h("summary", { text: "🧩 2차시에 내가 쓴 ①~⑦ 보기" }),
+    h("summary", { text: "🧩 3단계에서 내가 쓴 ①~⑦ 보기" }),
     h("ol", null, keys.map(function (k) { return h("li", { text: filled(S.data[k]) ? String(S.data[k]) : "(비어 있음)" }); })),
     h("button", { class: "btn ghost small", type: "button", text: "아래 칸에 이어 붙이기", onclick: function () {
       const ta = document.getElementById("f_para");
@@ -576,8 +588,8 @@ const BLOOM = [
 ];
 function bloomBox() {
   return h("details", { class: "bloom" },
-    h("summary", null, h("i", { class: "ico", "aria-hidden": "true", text: "🔭" }), "질문 수준 올려 보기 · 블룸의 6단계"),
-    h("p", { text: "같은 주제라도 질문을 어떻게 묻느냐에 따라 탐구의 깊이가 달라져요. 1학년은 2~4단계 질문이 알맞아요. 1단계 질문은 검색 한 번이면 끝나서 탐구가 짧아지고, 5~6단계는 다음 탐구에서 도전해 봐요." }),
+    h("summary", null, h("i", { class: "ico", "aria-hidden": "true", text: "🔭" }), "질문 수준 올려 보기 · 블룸의 여섯 수준", h("span", { class: "more", "aria-hidden": "true" })),
+    h("p", { text: "같은 주제라도 질문을 어떻게 묻느냐에 따라 탐구의 깊이가 달라져요. 1학년은 2~4수준 질문이 알맞아요. 1수준 질문은 검색 한 번이면 끝나서 탐구가 짧아지고, 5~6수준은 다음 탐구에서 도전해 봐요." }),
     h("ol", { class: "blist" }, BLOOM.map(function (x) {
       return h("li", { class: /추천/.test(x[3]) ? "rec" : "" }, h("b", { text: x[0] }), h("span", { class: "bd", text: x[1] }), h("span", { class: "bq", text: "🩺 " + x[2] }), h("em", { text: x[3] }));
     })),
@@ -586,7 +598,7 @@ function bloomBox() {
 }
 function collegeBox(open) {
   return h("details", { class: "college", open: open ? true : null },
-    h("summary", null, h("i", { class: "ico", "aria-hidden": "true", text: "🎓" }), "이 활동, 대학은 어떻게 볼까요? (학생부종합전형)"),
+    h("summary", null, h("i", { class: "ico", "aria-hidden": "true", text: "🎓" }), "이 활동, 대학은 어떻게 볼까요? (학생부종합전형)", h("span", { class: "more", "aria-hidden": "true" })),
     h("p", { text: "학생부종합전형에서 대학은 학교생활기록부를 읽고 크게 세 가지 역량을 살펴요. 여러 대학의 학생부종합전형 가이드북이 이 세 가지 틀로 평가 방법을 설명해요." }),
     h("div", { class: "cgrid" },
       h("div", null, h("b", { text: "📘 학업역량" }), h("p", { text: "배운 것을 스스로 더 알아보려는 태도와 탐구력" }), h("p", { class: "here", text: "이 활동에서는 → 질문을 세우고, 믿을 만한 자료로 답을 찾는 과정" })),
@@ -665,7 +677,7 @@ function renderStudent() {
     h("div", { class: "panel stage c-" + st.id + " " + kcls(st) },
       h("div", { class: "shead" },
         h("span", { class: "big", "aria-hidden": "true", text: LOOK[st.id] }),
-        h("span", { class: "tag" + (st.kind === "과제" ? " hw" : ""), text: (st.kind === "과제" ? "🏠 " : "🏫 ") + st.badge + " · " + st.nick }),
+        h("span", { class: "tag" + (st.kind === "과제" ? " hw" : ""), text: st.badge + " · " + st.nick + (st.kind === "과제" ? " · 🏠 과제" : " · 🏫 수업") }),
         h("h2", { text: st.title }),
         h("p", null, h("b", { text: "🎯 목표 " }), st.goal + "  ·  ⏱ " + st.time),
         h("div", { class: "kband" }, st.kind === "과제"
@@ -676,7 +688,8 @@ function renderStudent() {
         let n = 0;
         while (n < st.blocks.length && ((st.blocks[n].t === "guide" && st.blocks[n].title === "가이드") || st.blocks[n].t === "people")) n++;
         return [levelsBox(st), teacherNote(st), moreInfo(st, st.blocks.slice(0, n))].concat(st.blocks.slice(n).map(blockEl));
-      })()),
+      })(),
+      S.browse ? null : stageEnd(st)),
     h("div", { id: "bar", class: "bar noprint" }));
   renderNav(); renderBar(); updReq();
 }
@@ -856,7 +869,7 @@ function statusTab() {
     h("div", { class: "panel" },
       h("div", { class: "tblwrap" }, h("table", { class: "st" },
         h("thead", null, h("tr", null, h("th", { class: "l", text: "학번" }), h("th", { class: "l", text: "이름" }),
-          STAGES.map(function (st, i) { return h("th", null, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), st.nick, h("br"), st.badge + " (" + done[i] + "/" + rows.length + ")"); }),
+          STAGES.map(function (st, i) { return h("th", null, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), st.nick, h("br"), st.badge + " " + st.kind + " (" + done[i] + "/" + rows.length + ")"); }),
           h("th", { text: "확인①" }), h("th", { text: "확인②" }), h("th", { text: "확인③" }), h("th", { class: "l", text: "탐구 질문" }))),
         tb)),
       h("p", { class: "legend", text: "● 완료: 저장했고 필수 칸을 모두 채움 · ◐ 작성 중 · ○ 아직.  학생 줄을 누르면 아래에 보고서와 확인·피드백 칸이 열립니다." })));
@@ -872,7 +885,7 @@ function detailPanel(r) {
     const f = h("textarea", { rows: 2, maxlength: "500", "aria-label": "확인 " + n + " 피드백" }); f.value = r["t_f" + n] || "";
     inputs["t_c" + n] = function () { return c.checked ? "확인" : ""; };
     inputs["t_f" + n] = function () { return f.value; };
-    left.append(h("div", { class: "chk" }, c, h("label", { for: "tc" + n, text: "확인 " + "①②③"[n - 1] + " (" + ["1차시 질문", "2차시 자료·근거", "3차시 최종"][n - 1] + ")" })),
+    left.append(h("div", { class: "chk" }, c, h("label", { for: "tc" + n, text: "확인 " + "①②③"[n - 1] + " (" + ["1단계 질문", "3단계 자료·근거", "5단계 최종"][n - 1] + ")" })),
       h("p", { class: "hint", text: "학생에게 보이는 한마디" }), f);
   });
   const right = h("div", null, h("p", { class: "sub", style: "margin-top:14px", text: "평가 기준표 · 학생에게 보이지 않음" }));
@@ -1019,7 +1032,7 @@ function summaryTab() {
         SUM.filter(function (x) { return filled(r[x[1]]); }).map(function (x) { return h("p", null, h("b", { text: x[0] + ": " }), String(r[x[1]])); }),
         SUM.some(function (x) { return x[1] !== "career" && filled(r[x[1]]); }) ? null :
           h("p", { class: "hint", text: anyStage
-            ? "요약에 모으는 칸(탐구 질문, 2차시 결과 정리, 3차시 돌아보기)은 아직 비어 있습니다. 지금까지 쓴 내용은 '제출 현황·확인'에서 학생을 누르면 볼 수 있습니다."
+            ? "요약에 모으는 칸(탐구 질문, 3단계 결과 정리, 5단계 돌아보기)은 아직 비어 있습니다. 지금까지 쓴 내용은 '제출 현황·확인'에서 학생을 누르면 볼 수 있습니다."
             : "아직 저장한 내용이 없습니다." }));
     }));
 }
