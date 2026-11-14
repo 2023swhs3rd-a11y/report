@@ -278,6 +278,8 @@ function withJosa(t, w) {
   });
 }
 const QTPL_LABEL = ["왜 ~일까?", "어떤 영향을 줄까?", "무엇이 다를까?", "줄이려면(늘리려면)?", "앞으로 어떻게?"];
+/* "모두 합쳐 5개 이상"처럼 묶어서 채우는 칸은 '선택' 표시를 붙이지 않는다(건너뛰어도 된다고 읽히지 않게) */
+const NO_OPT = ["career", "k1", "k2", "k3", "k4", "word"];
 function fieldEl(f) {
   const idv = "f_" + f.key;
   let inp;
@@ -306,7 +308,7 @@ function fieldEl(f) {
       inp.value = withJosa(t, w); set(inp.value); inp.focus();
     } });
   }));
-  const tag = f.req ? h("span", { class: "req must", text: "필수" }) : f.challenge ? h("span", { class: "req ch", text: "🚀 도전" }) : f.link ? h("span", { class: "req lk", text: "🔗 연결" }) : h("span", { class: "req opt", text: "선택" });
+  const tag = f.req ? h("span", { class: "req must", text: "필수" }) : f.challenge ? h("span", { class: "req ch", text: "🚀 도전" }) : f.link ? h("span", { class: "req lk", text: "🔗 연결" }) : NO_OPT.indexOf(f.key) >= 0 ? null : h("span", { class: "req opt", text: "선택" });
   /* 질문 카드: 질문(제목·설명) → 예시(참고) → 내 답(가장 뚜렷하게) 순서로 구역을 나눈다 */
   return h("div", { class: "fwrap" + (f.req ? " isreq" : "") + (f.challenge ? " challenge" : "") + (f.link ? " linked" : "") + (filled(val) ? " done" : ""), "data-k": f.key },
     h("div", { class: "qhead" },
@@ -336,7 +338,8 @@ function levelsBox(st) {
 }
 /* 가이드·더 해 보기·예시 친구 소개는 접어 둔다(첫 질문이 빨리 보이게) */
 function moreInfo(st, lead) {
-  return h("details", { class: "moreinfo" },
+  /* 휴대폰에서는 접고, 태블릿·PC에서는 펼친다 */
+  return h("details", { class: "moreinfo", open: window.matchMedia("(min-width: 641px)").matches || null },
     h("summary", null, h("span", { text: "📖 안내 더 보기" }), h("small", { text: "가이드 · 더 해 보고 싶다면 · 예시 친구" })),
     lead.map(blockEl),
     st.more ? h("div", { class: "lv more" }, h("b", { text: "🚀 더 해 보고 싶다면" }),
