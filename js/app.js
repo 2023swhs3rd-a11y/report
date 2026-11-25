@@ -826,12 +826,12 @@ const SORTS = [
   ["id", "학번 순", 1], ["done", "완성한 단계 많은 순", -1], ["chk", "교사 확인 많은 순", -1], ["unchk", "확인할 단계 많은 순", -1],
   ["q", "탐구 질문 입력 순 (먼저 쓴 학생부터)", 1], ["upd", "최근 저장 순", -1], ["name", "이름 순", 1]
 ];
-function doneCount(r) { return STAGES.filter(function (st) { return stageStatus(r, st) === 2; }).length; }
+function rowDone(r) { return STAGES.filter(function (st) { return stageStatus(r, st) === 2; }).length; }
 function progScore(r) { return STAGES.reduce(function (a, st) { return a + stageStatus(r, st); }, 0); }
 function chkCount(r) { return [1, 2, 3].filter(function (n) { return filled(r["t_c" + n]); }).length; }
 function unchkCount(r) { return STAGES.filter(function (st) { return st.check && filled(r[st.id]) && !filled(r["t_c" + st.check]); }).length; }
 function sortVal(r, k) {
-  if (k === "done") return doneCount(r) * 100 + progScore(r);
+  if (k === "done") return rowDone(r) * 100 + progScore(r);
   if (k === "chk") return chkCount(r);
   if (k === "unchk") return unchkCount(r);
   if (k === "q") return filled(r.question) ? String(r.s1 || "9999") : "";   /* 질문을 쓴 학생만 1단계 저장 시각 순, 안 쓴 학생은 맨 뒤 */
@@ -907,7 +907,7 @@ function statusTab() {
     const tr = h("tr", { class: "row" + (r.id === T.sel ? " sel" : ""), tabindex: "0", "data-id": r.id, onclick: function () { openDetail(r.id); },
       onkeydown: function (e) { if (e.key === "Enter") tr.click(); } },
       h("td", { class: "l", text: r.id }), h("td", { class: "l" }, r.name, isLocked(r) ? h("span", { class: "lockb", title: "비밀번호를 여러 번 틀려 잠김", text: "🔒 잠김" }) : null),
-      h("td", { class: "done" }, h("b", { text: doneCount(r) }), "/" + STAGES.length),
+      h("td", { class: "done" }, h("b", { text: rowDone(r) }), "/" + STAGES.length),
       STAGES.map(function (st) { const s = stageStatus(r, st); return h("td", { class: "s" + s, title: STATUS[s][1], text: STATUS[s][0] + " " + STATUS[s][1] }); }),
       [1, 2, 3].map(function (n) { return h("td", { class: filled(r["t_c" + n]) ? "s2" : "s0", text: filled(r["t_c" + n]) ? "확인" : "—" }); }),
       h("td", { class: "q", text: filled(r.question) ? String(r.question) : "" }));
