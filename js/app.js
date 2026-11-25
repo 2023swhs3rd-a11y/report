@@ -817,7 +817,44 @@ function isLocked(r) {
   const mf = T.meta.maxFails || 10, lm = T.meta.lockMinutes || 5;
   return Number(r.fails) >= mf && (Date.now() + T.skew - Number(r.lockt)) < lm * 60000;
 }
-function shownRows() { return T.rows.filter(function (r) { return (!T.cls || clsOf(r.id) === T.cls) && (!T.todo || T.tab !== "status" || needsCheck(r)); }); }
+function shownRows() {
+  const rs = T.rows.filter(function (r) { return (!T.cls || clsOf(r.id) === T.cls) && (!T.todo || T.tab !== "status" || needsCheck(r)); });
+  return sortRows(rs);
+}
+/* 정렬: 표 머리글을 누르거나 '정렬' 목록에서 고른다. 같으면 학번 순 */
+const SORTS = [
+  ["id", "학번 순", 1], ["done", "완성한 단계 많은 순", -1], ["chk", "교사 확인 많은 순", -1], ["unchk", "확인할 단계 많은 순", -1],
+  ["q", "탐구 질문 입력 순 (먼저 쓴 학생부터)", 1], ["upd", "최근 저장 순", -1], ["name", "이름 순", 1]
+];
+function doneCount(r) { return STAGES.filter(function (st) { return stageStatus(r, st) === 2; }).length; }
+function progScore(r) { return STAGES.reduce(function (a, st) { return a + stageStatus(r, st); }, 0); }
+function chkCount(r) { return [1, 2, 3].filter(function (n) { return filled(r["t_c" + n]); }).length; }
+function unchkCount(r) { return STAGES.filter(function (st) { return st.check && filled(r[st.id]) && !filled(r["t_c" + st.check]); }).length; }
+function sortVal(r, k) {
+  if (k === "done") return doneCount(r) * 100 + progScore(r);
+  if (k === "chk") return chkCount(r);
+  if (k === "unchk") return unchkCount(r);
+  if (k === "q") return filled(r.question) ? String(r.s1 || "9999") : "";   /* 질문을 쓴 학생만 1단계 저장 시각 순, 안 쓴 학생은 맨 뒤 */
+  if (k === "upd") return String(r.updated || "");
+  if (/^s\d$/.test(k)) return stageStatus(r, STAGES.find(function (st) { return st.id === k; }));
+  return String(r[k] || "");
+}
+function sortRows(rs) {
+  const k = T.sortK || "id", dir = T.sortD || 1;
+  return rs.slice().sort(function (a, b) {
+    let x = sortVal(a, k), y = sortVal(b, k);
+    if (k === "q") { if (!x !== !y) return x ? -1 : 1; }
+    if (x !== y) return (x < y ? -1 : 1) * dir;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
+}
+function setSort(k, dir) {
+  if (dir == null) {
+    const def = (SORTS.find(function (x) { return x[0] === k; }) || [0, 0, /^s\d$/.test(k) ? -1 : 1])[2];
+    dir = T.sortK === k ? -(T.sortD || def) : def;
+  }
+  T.sortK = k; T.sortD = dir; renderTeacher();
+}
 function renderTeacher() {
   document.body.classList.remove("has-bar");
   if (DM.el && T.tab !== "status") closeDetail(true);
@@ -835,6 +872,10 @@ function renderTeacher() {
     h("option", { value: "", text: "전체 (" + total + "명)" + (T.partial ? " · 느릴 수 있음" : "") }),
     classes.map(function (c) { return h("option", { value: c[0], text: clsName(c[0]) + " (" + c[1] + "명)" }); }));
   sel.value = T.cls;
+  const sortSel = h("select", { "aria-label": "정렬", class: "sortsel", onchange: function () { const x = SORTS.find(function (y) { return y[0] === sortSel.value; }); setSort(x[0], x[2]); } },
+    SORTS.map(function (x) { return h("option", { value: x[0], text: "↕ " + x[1] }); }),
+    SORTS.some(function (x) { return x[0] === (T.sortK || "id"); }) ? null : h("option", { value: T.sortK, text: "↕ 표 머리글 기준" }));
+  sortSel.value = T.sortK || "id";
   const todo = h("label", { class: "todo" }, h("input", { type: "checkbox", checked: T.todo || null, onchange: function (e) { T.todo = e.target.checked; T.sel = ""; renderTeacher(); } }), " 확인 안 한 학생만");
   const tabBtn = function (id, label) { return h("button", { type: "button", role: "tab", "aria-selected": T.tab === id ? "true" : "false", text: label, onclick: function () { T.tab = id; renderTeacher(); } }); };
   put($app, 
@@ -843,12 +884,19 @@ function renderTeacher() {
       h("button", { class: "btn ghost small", type: "button", text: "새로 고침", onclick: async function () { try { await loadRows(); renderTeacher(); toast("새로 불러왔습니다."); } catch (e) { toast(e.message, true); } } })),
     DEMO ? h("div", { class: "demo" }, h("b", { text: "미리보기 모드 " }), "이 기기에 저장된 연습 자료입니다.") : null,
     !DEMO && T.meta.roster === 0 ? h("div", { class: "warnbox", role: "alert" }, h("b", { text: "⚠️ '명단' 시트가 비어 있어요. " }), "지금은 학번과 이름만 알면 누구나 가입할 수 있어요. 구글 시트의 '명단' 시트에 학생 학번·이름을 넣어 두면 명단에 있는 학생만 들어올 수 있어요.") : null,
-    h("div", { class: "tools" }, (T.tab === "sample" || T.tab === "admin") ? null : sel, T.tab === "status" ? todo : null,
+    h("div", { class: "tools" }, (T.tab === "sample" || T.tab === "admin") ? null : sel, T.tab === "status" ? todo : null, (T.tab === "status" || T.tab === "summary") ? sortSel : null,
       h("div", { class: "tabs", role: "tablist" }, tabBtn("status", "제출 현황·확인"), tabBtn("summary", "학생부 작성용 요약"), tabBtn("sample", "📚 완성 예시"), tabBtn("admin", "⚙️ 관리")),
       (T.tab === "status" || T.tab === "summary") && shownRows().length ? h("button", { class: "btn ghost small", type: "button", text: "🖨️ 보이는 학생 모두 인쇄 (" + shownRows().length + "명)", onclick: function () {
         const rs = shownRows(); renderPrint(rs, (T.cls ? clsName(T.cls) : "전체") + " " + rs.length + "명", renderTeacher, true);
       } }) : null),
     T.tab === "status" ? statusTab() : T.tab === "summary" ? summaryTab() : T.tab === "sample" ? sampleTab() : adminTab());
+}
+/* 정렬 머리글 */
+function sth(k, label, cls, span) {
+  const on = (T.sortK || "id") === k, dir = T.sortD || 1;
+  return h("th", { class: cls || null, colspan: span ? String(span) : null, "aria-sort": on ? (dir > 0 ? "ascending" : "descending") : "none" },
+    h("button", { type: "button", class: "sortb" + (on ? " on" : ""), title: "눌러서 정렬 (한 번 더 누르면 반대로)", onclick: function () { setSort(k); } },
+      label, h("span", { class: "arr", "aria-hidden": "true", text: on ? (dir > 0 ? " ▲" : " ▼") : " ↕" })));
 }
 function statusTab() {
   const rows = shownRows();
@@ -859,6 +907,7 @@ function statusTab() {
     const tr = h("tr", { class: "row" + (r.id === T.sel ? " sel" : ""), tabindex: "0", "data-id": r.id, onclick: function () { openDetail(r.id); },
       onkeydown: function (e) { if (e.key === "Enter") tr.click(); } },
       h("td", { class: "l", text: r.id }), h("td", { class: "l" }, r.name, isLocked(r) ? h("span", { class: "lockb", title: "비밀번호를 여러 번 틀려 잠김", text: "🔒 잠김" }) : null),
+      h("td", { class: "done" }, h("b", { text: doneCount(r) }), "/" + STAGES.length),
       STAGES.map(function (st) { const s = stageStatus(r, st); return h("td", { class: "s" + s, title: STATUS[s][1], text: STATUS[s][0] + " " + STATUS[s][1] }); }),
       [1, 2, 3].map(function (n) { return h("td", { class: filled(r["t_c" + n]) ? "s2" : "s0", text: filled(r["t_c" + n]) ? "확인" : "—" }); }),
       h("td", { class: "q", text: filled(r.question) ? String(r.question) : "" }));
@@ -870,11 +919,11 @@ function statusTab() {
       (T.meta.lockMinutes || 5) + "분 뒤 저절로 풀려요. 바로 풀려면 학생 줄을 눌러 '학생 비밀번호 초기화'를 누르세요.") : null,
     h("div", { class: "panel" },
       h("div", { class: "tblwrap" }, h("table", { class: "st" },
-        h("thead", null, h("tr", null, h("th", { class: "l", text: "학번" }), h("th", { class: "l", text: "이름" }),
-          STAGES.map(function (st, i) { return h("th", null, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), st.nick, h("br"), st.badge + " " + st.kind + " (" + done[i] + "/" + rows.length + ")"); }),
-          h("th", { text: "확인①" }), h("th", { text: "확인②" }), h("th", { text: "확인③" }), h("th", { class: "l", text: "탐구 질문" }))),
+        h("thead", null, h("tr", null, sth("id", "학번", "l"), sth("name", "이름", "l"), sth("done", "완성", ""),
+          STAGES.map(function (st, i) { return sth(st.id, [h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), st.nick, h("br"), st.badge + " " + st.kind + " (" + done[i] + "/" + rows.length + ")"], ""); }),
+          sth("chk", "교사 확인", "", 3), sth("q", "탐구 질문", "l"))),
         tb)),
-      h("p", { class: "legend", text: "● 완료: 저장했고 필수 칸을 모두 채움 · ◐ 작성 중 · ○ 아직.  학생 줄을 누르면 창이 열려 왼쪽에 학생 보고서, 오른쪽에 확인·피드백 칸이 나옵니다." })));
+      h("p", { class: "legend", text: "● 완료: 저장했고 필수 칸을 모두 채움 · ◐ 작성 중 · ○ 아직.  표 머리글을 누르면 정렬돼요(한 번 더 누르면 반대로).  학생 줄을 누르면 창이 열려 왼쪽에 학생 보고서, 오른쪽에 확인·피드백 칸이 나옵니다." })));
   return out;
 }
 /* ---------- 학생 상세 창(팝업): 왼쪽 학생 보고서, 오른쪽 교사 확인·피드백 ----------
@@ -916,6 +965,39 @@ document.addEventListener("keydown", function (e) {
     else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); }
   }
 });
+/* 학생부 작성용 요약(학생이 쓴 칸만)과 AI 평가 요청문 */
+function sumItems(r) { return SUM.filter(function (x) { return !/^t_/.test(x[1]) && filled(r[x[1]]); }); }
+function aiPrompt(r) {
+  const lines = sumItems(r).map(function (x) { return "- " + x[0] + ": " + String(r[x[1]]).replace(/\s+/g, " ").trim(); });
+  return [
+    "다음은 고등학교 1학년 학생이 '진로 빌드업 맵' 탐구 활동(관심에서 질문 만들기 → 자료 찾기 → 답 정리 → 글쓰기 → 발표·성찰)에서 쓴 보고서 요약입니다.",
+    "학생 이름과 학번은 뺐습니다. 아래 내용에 있는 사실만 근거로, 없는 활동을 지어내지 말고 평가해 주세요.",
+    "",
+    "[학생이 쓴 내용]", lines.join("\n") || "- (아직 쓴 내용 없음)",
+    "",
+    "[평가 기준] 각 항목을 잘함 / 보통 / 노력 필요 중 하나로 고르고 근거를 한 문장으로:",
+    RUBRIC.map(function (x) { return "- " + x[1]; }).join("\n"),
+    "",
+    "[출력 형식]",
+    "1. 기준별 평가와 근거",
+    "2. 잘한 점 2가지, 보완하면 좋을 점 2가지 (학생에게 건넬 수 있는 친절한 말투)",
+    "3. 진로활동 특기사항 초안 (250자 안팎, '~함'체, 동기 → 질문 → 과정 → 배운 점 → 후속 순서, 평가어보다 한 일을 드러내는 동사 위주)",
+    "4. 학생부 기재 시 주의할 점 (사실 확인이 필요한 부분)"
+  ].join("\n");
+}
+function sumBox(r) {
+  const items = sumItems(r);
+  const ai = h("button", { class: "btn ghost small", type: "button", text: "🤖 AI 평가 요청문 복사", title: "이름·학번을 뺀 요약과 평가 기준을 묶어 복사해요. Claude 같은 AI 대화창에 붙여 넣으면 평가와 특기사항 초안을 받아 볼 수 있어요.",
+    onclick: async function () {
+      try { await navigator.clipboard.writeText(aiPrompt(r)); toast("복사했어요. AI 대화창에 붙여 넣으세요. 결과는 꼭 확인한 뒤 써 주세요."); }
+      catch (e) { toast("복사하지 못했어요.", true); }
+    } });
+  return h("details", { class: "dm-sum", open: true },
+    h("summary", null, h("span", { text: "📋 학생부 작성용 요약" }), h("small", { text: items.length ? " 학생이 쓴 칸 " + items.length + "개" : " 아직 요약할 내용이 없어요" })),
+    items.length ? h("dl", null, [].concat.apply([], items.map(function (x) { return [h("dt", { text: x[0] }), h("dd", { text: String(r[x[1]]) })]; }))) : null,
+    h("div", { class: "dm-sumtools" }, ai,
+      h("span", { class: "hint", text: "AI 평가는 참고용이에요. 이름·학번은 빼고 복사돼요." })));
+}
 function neighbour(id, step) {
   const rs = shownRows(), i = rs.findIndex(function (x) { return x.id === id; });
   return rs[i + step] || null;
@@ -931,11 +1013,7 @@ function detailModal(r) {
     const s = stageStatus(r, st);
     return h("button", { type: "button", class: "s" + s, title: STATUS[s][1], onclick: function () { goStageView(i); } }, LOOK[st.id] + " " + st.badge, h("small", { text: " " + STATUS[s][0] }));
   }));
-  const left = h("section", { class: "dm-left", "aria-label": "학생이 쓴 보고서", tabindex: "0" },
-    h("div", { class: "dm-sum" },
-      h("p", null, h("b", { text: "관심 진로 " }), filled(r.career) ? String(r.career) : "—"),
-      h("p", null, h("b", { text: "탐구 질문 " }), filled(r.question) ? String(r.question) : "—")),
-    view);
+  const left = h("section", { class: "dm-left", "aria-label": "학생이 쓴 보고서", tabindex: "0" }, sumBox(r), view);
   /* 오른쪽: 교사 확인·피드백 */
   const CHK = [[1, 0, "1단계 질문"], [2, 2, "3단계 자료·근거"], [3, 4, "5단계 최종"]];
   const right = h("section", { class: "dm-right", "aria-label": "교사 확인과 피드백" });
