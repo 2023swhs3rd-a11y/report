@@ -967,21 +967,35 @@ document.addEventListener("keydown", function (e) {
 });
 /* 학생부 작성용 요약(학생이 쓴 칸만)과 AI 평가 요청문 */
 function sumItems(r) { return SUM.filter(function (x) { return !/^t_/.test(x[1]) && filled(r[x[1]]); }); }
+/* 기준마다 근거가 되는 단계(그 단계가 아직이면 AI에게 '평가 보류'로 하라고 알린다) */
+const RUB_STAGE = { t_r1: ["s1"], t_r2: ["s2"], t_r3: ["s3"], t_r4: ["s3", "s4"], t_r5: ["s5"] };
 function aiPrompt(r) {
   const lines = sumItems(r).map(function (x) { return "- " + x[0] + ": " + String(r[x[1]]).replace(/\s+/g, " ").trim(); });
+  const stName = function (id) { const st = STAGES.find(function (x) { return x.id === id; }); return st.badge + "(" + st.nick + ")"; };
+  const prog = STAGES.map(function (st) {
+    const s = stageStatus(r, st);
+    return "- " + st.badge + " " + st.nick + ": " + ["아직 안 함", "쓰는 중(필수 칸이 비어 있음)", "완료"][s];
+  });
+  const rubLines = RUBRIC.map(function (x) {
+    const need = RUB_STAGE[x[0]] || [];
+    const ready = need.some(function (id) { return stageStatus(r, STAGES.find(function (s) { return s.id === id; })) > 0; });
+    return "- " + x[1] + " (근거 단계: " + need.map(stName).join(", ") + ")" + (ready ? "" : " → 이 단계가 아직이므로 '평가 보류'로 쓰기");
+  });
   return [
     "다음은 고등학교 1학년 학생이 '진로 빌드업 맵' 탐구 활동(관심에서 질문 만들기 → 자료 찾기 → 답 정리 → 글쓰기 → 발표·성찰)에서 쓴 보고서 요약입니다.",
     "학생 이름과 학번은 뺐습니다. 아래 내용에 있는 사실만 근거로, 없는 활동을 지어내지 말고 평가해 주세요.",
     "",
+    "[단계별 진행 상태]", prog.join("\n"),
+    "",
     "[학생이 쓴 내용]", lines.join("\n") || "- (아직 쓴 내용 없음)",
     "",
-    "[평가 기준] 각 항목을 잘함 / 보통 / 노력 필요 중 하나로 고르고 근거를 한 문장으로:",
-    RUBRIC.map(function (x) { return "- " + x[1]; }).join("\n"),
+    "[평가 기준] 각 항목을 잘함 / 보통 / 노력 필요 / 평가 보류 중 하나로 고르고 근거를 한 문장으로. 근거 단계가 '아직 안 함'이면 반드시 '평가 보류'로 쓰고, '쓰는 중'이면 지금까지 쓴 내용만으로 평가하되 그렇다고 밝혀 주세요:",
+    rubLines.join("\n"),
     "",
     "[출력 형식]",
     "1. 기준별 평가와 근거",
     "2. 잘한 점 2가지, 보완하면 좋을 점 2가지 (학생에게 건넬 수 있는 친절한 말투)",
-    "3. 진로활동 특기사항 초안 (250자 안팎, '~함'체, 동기 → 질문 → 과정 → 배운 점 → 후속 순서, 평가어보다 한 일을 드러내는 동사 위주)",
+    "3. 진로활동 특기사항 초안 (250자 안팎, '~함'체, 동기 → 질문 → 과정 → 배운 점 → 후속 순서, 평가어보다 한 일을 드러내는 동사 위주). 아직 하지 않은 단계의 내용(과정·배운 점 등)은 쓰지 말고, 계획은 계획으로만 쓰기",
     "4. 학생부 기재 시 주의할 점 (사실 확인이 필요한 부분)"
   ].join("\n");
 }

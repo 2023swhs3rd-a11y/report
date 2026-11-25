@@ -639,3 +639,4 @@ details.dm-sum dd { margin: 0; white-space: pre-wrap; }
 .dm-sumtools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 14px 12px; border-top: 1px dashed var(--line-strong); }
 .dm-sumtools .hint { margin: 0; }
 @media (max-width: 640px) { details.dm-sum dl { grid-template-columns: 1fr; } details.dm-sum dd { margin-bottom: 6px; } }
+.toast { pointer-events: none; }   /* 알림이 아래 버튼을 가려 누르기가 안 되는 일이 없게 */
