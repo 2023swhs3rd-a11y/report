@@ -758,6 +758,7 @@ window.addEventListener("beforeunload", function (e) { if ((S.dirty || pendGet()
 const T = { pw: "", rows: [], cls: "", tab: "status", sel: "", idle: null, sample: 0, meta: {}, partial: false, all: false, todo: false, skew: 0 };
 /* 교사 화면을 30분 동안 쓰지 않으면 비밀번호를 지우고 로그인 화면으로 돌아간다 */
 function teacherLogout(msg) {
+  closeDetail(true);
   T.pw = ""; T.rows = []; T.sel = ""; T.meta = {}; T.partial = T.all = false; clearTimeout(T.idle);
   if (location.hash === "#teacher") renderTeacherLogin();
   if (msg) toast(msg);
@@ -819,6 +820,7 @@ function isLocked(r) {
 function shownRows() { return T.rows.filter(function (r) { return (!T.cls || clsOf(r.id) === T.cls) && (!T.todo || T.tab !== "status" || needsCheck(r)); }); }
 function renderTeacher() {
   document.body.classList.remove("has-bar");
+  if (DM.el && T.tab !== "status") closeDetail(true);
   $app.className = "wrap wide";
   const classes = classList();
   if (T.cls && !classes.some(function (c) { return c[0] === T.cls; })) T.cls = "";
@@ -854,7 +856,7 @@ function statusTab() {
   const locked = rows.filter(isLocked);
   const tb = h("tbody");
   rows.forEach(function (r) {
-    const tr = h("tr", { class: "row" + (r.id === T.sel ? " sel" : ""), tabindex: "0", onclick: function () { T.sel = r.id; renderTeacher(); const d = document.getElementById("detail"); if (d) d.scrollIntoView({ behavior: "smooth", block: "start" }); },
+    const tr = h("tr", { class: "row" + (r.id === T.sel ? " sel" : ""), tabindex: "0", "data-id": r.id, onclick: function () { openDetail(r.id); },
       onkeydown: function (e) { if (e.key === "Enter") tr.click(); } },
       h("td", { class: "l", text: r.id }), h("td", { class: "l" }, r.name, isLocked(r) ? h("span", { class: "lockb", title: "비밀번호를 여러 번 틀려 잠김", text: "🔒 잠김" }) : null),
       STAGES.map(function (st) { const s = stageStatus(r, st); return h("td", { class: "s" + s, title: STATUS[s][1], text: STATUS[s][0] + " " + STATUS[s][1] }); }),
@@ -872,58 +874,155 @@ function statusTab() {
           STAGES.map(function (st, i) { return h("th", null, h("span", { class: "em", "aria-hidden": "true", text: LOOK[st.id] }), st.nick, h("br"), st.badge + " " + st.kind + " (" + done[i] + "/" + rows.length + ")"); }),
           h("th", { text: "확인①" }), h("th", { text: "확인②" }), h("th", { text: "확인③" }), h("th", { class: "l", text: "탐구 질문" }))),
         tb)),
-      h("p", { class: "legend", text: "● 완료: 저장했고 필수 칸을 모두 채움 · ◐ 작성 중 · ○ 아직.  학생 줄을 누르면 아래에 보고서와 확인·피드백 칸이 열립니다." })));
-  const cur = T.rows.find(function (r) { return r.id === T.sel; });
-  if (cur) out.append(detailPanel(cur));
+      h("p", { class: "legend", text: "● 완료: 저장했고 필수 칸을 모두 채움 · ◐ 작성 중 · ○ 아직.  학생 줄을 누르면 창이 열려 왼쪽에 학생 보고서, 오른쪽에 확인·피드백 칸이 나옵니다." })));
   return out;
 }
-function detailPanel(r) {
+/* ---------- 학생 상세 창(팝업): 왼쪽 학생 보고서, 오른쪽 교사 확인·피드백 ----------
+   학생이 쓴 칸은 읽기만 하고, 저장하는 것은 교사 칸(t_로 시작)뿐이다 */
+const DM = { el: null, dirty: false, id: "", ret: null };
+function openDetail(id) {
+  const r = T.rows.find(function (x) { return x.id === id; });
+  if (!r) return;
+  if (!DM.el) DM.ret = document.activeElement;
+  closeDetail(true);
+  T.sel = id;
+  document.querySelectorAll("table.st tr.row").forEach(function (tr) { tr.classList.toggle("sel", tr.dataset.id === id); });
+  DM.id = id; DM.dirty = false;
+  DM.el = detailModal(r);
+  document.body.append(DM.el);
+  document.body.classList.add("modal-open");
+  const f = DM.el.querySelector(".dm-close"); if (f) f.focus();
+}
+function closeDetail(force) {
+  if (!DM.el) return true;
+  if (!force && DM.dirty && !confirm("저장하지 않은 확인·피드백이 있어요. 저장하지 않고 닫을까요?")) return false;
+  DM.el.remove(); DM.el = null; DM.dirty = false;
+  document.body.classList.remove("modal-open");
+  if (!force) {
+    const tr = document.querySelector('table.st tr.row[data-id="' + DM.id + '"]');
+    const back = tr || DM.ret;
+    if (back && back.focus) back.focus();
+  }
+  return true;
+}
+document.addEventListener("keydown", function (e) {
+  if (!DM.el) return;
+  if (e.key === "Escape") { e.preventDefault(); closeDetail(false); }
+  else if (e.key === "Tab") {           /* 창 안에서만 포커스가 돌게 */
+    const fs = Array.from(DM.el.querySelectorAll("button, textarea, input, select, a[href], [tabindex='0']")).filter(function (x) { return !x.disabled && x.offsetParent !== null; });
+    if (!fs.length) return;
+    const a = fs[0], z = fs[fs.length - 1];
+    if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); }
+    else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); }
+  }
+});
+function neighbour(id, step) {
+  const rs = shownRows(), i = rs.findIndex(function (x) { return x.id === id; });
+  return rs[i + step] || null;
+}
+function detailModal(r) {
   const inputs = {};
-  const left = h("div", null);
-  [1, 2, 3].forEach(function (n) {
-    const c = h("input", { type: "checkbox", id: "tc" + n }); c.checked = filled(r["t_c" + n]);
-    const f = h("textarea", { rows: 2, maxlength: "500", "aria-label": "확인 " + n + " 피드백" }); f.value = r["t_f" + n] || "";
+  const dirty = function () { DM.dirty = true; st.textContent = "✋ 저장 안 됨"; st.className = "dm-state dirty"; };
+  /* 왼쪽: 학생 보고서 */
+  const view = answersView(r);
+  const heads = view.querySelectorAll("h3");
+  const goStageView = function (i) { const t = heads[i]; if (t) left.scrollTo({ top: t.offsetTop - left.offsetTop - 8, behavior: "smooth" }); };
+  const jump = h("div", { class: "dm-jump" }, STAGES.map(function (st, i) {
+    const s = stageStatus(r, st);
+    return h("button", { type: "button", class: "s" + s, title: STATUS[s][1], onclick: function () { goStageView(i); } }, LOOK[st.id] + " " + st.badge, h("small", { text: " " + STATUS[s][0] }));
+  }));
+  const left = h("section", { class: "dm-left", "aria-label": "학생이 쓴 보고서", tabindex: "0" },
+    h("div", { class: "dm-sum" },
+      h("p", null, h("b", { text: "관심 진로 " }), filled(r.career) ? String(r.career) : "—"),
+      h("p", null, h("b", { text: "탐구 질문 " }), filled(r.question) ? String(r.question) : "—")),
+    view);
+  /* 오른쪽: 교사 확인·피드백 */
+  const CHK = [[1, 0, "1단계 질문"], [2, 2, "3단계 자료·근거"], [3, 4, "5단계 최종"]];
+  const right = h("section", { class: "dm-right", "aria-label": "교사 확인과 피드백" });
+  right.append(h("h3", { class: "dm-h", text: "✅ 단계 확인 · 학생에게 보이는 한마디" }));
+  CHK.forEach(function (x) {
+    const n = x[0];
+    const c = h("input", { type: "checkbox", id: "tc" + n, onchange: dirty }); c.checked = filled(r["t_c" + n]);
+    const f = h("textarea", { rows: 2, maxlength: "500", "aria-label": "확인 " + n + " 피드백", oninput: dirty }); f.value = r["t_f" + n] || "";
     inputs["t_c" + n] = function () { return c.checked ? "확인" : ""; };
     inputs["t_f" + n] = function () { return f.value; };
-    left.append(h("div", { class: "chk" }, c, h("label", { for: "tc" + n, text: "확인 " + "①②③"[n - 1] + " (" + ["1단계 질문", "3단계 자료·근거", "5단계 최종"][n - 1] + ")" })),
-      h("p", { class: "hint", text: "학생에게 보이는 한마디" }), f);
+    right.append(h("div", { class: "dm-chk c-" + STAGES[x[1]].id },
+      h("div", { class: "chk" }, c, h("label", { for: "tc" + n, text: "확인 " + "①②③"[n - 1] + " · " + x[2] }),
+        h("button", { class: "linkbtn", type: "button", text: "← 학생 답 보기", onclick: function () { goStageView(x[1]); } })),
+      f));
   });
-  const right = h("div", null, h("p", { class: "sub", style: "margin-top:14px", text: "평가 기준표 · 학생에게 보이지 않음" }));
+  right.append(h("h3", { class: "dm-h", text: "📊 평가 기준표 · 학생에게 보이지 않음" }));
   const rub = h("div", { class: "rub" });
   RUBRIC.forEach(function (x) {
-    const s = segEl(LEVELS, r[x[0]] || "", function () {}, x[1]);
-    inputs[x[0]] = function () { return s.dataset.v; };
-    rub.append(h("span", { text: x[1] }), s);
+    const sg = segEl(LEVELS, r[x[0]] || "", dirty, x[1]);
+    inputs[x[0]] = function () { return sg.dataset.v; };
+    rub.append(h("span", { text: x[1] }), sg);
   });
-  const memo = h("textarea", { rows: 4, maxlength: "1500", id: "tmemo" }); memo.value = r.t_memo || "";
+  const memo = h("textarea", { rows: 4, maxlength: "1500", id: "tmemo", oninput: dirty }); memo.value = r.t_memo || "";
   inputs.t_memo = function () { return memo.value; };
-  const note = h("textarea", { rows: 6, maxlength: "1000", id: "tnote" }); note.value = r.t_note || "";
+  const note = h("textarea", { rows: 7, maxlength: "1000", id: "tnote" }); note.value = r.t_note || "";
   const cnt = h("span", { class: "cnt" });
   const upd = function () { const n = note.value.length; cnt.textContent = n + "자 / 진로활동 특기사항 전체 " + NOTE_LIMIT + "자"; cnt.className = "cnt" + (n > NOTE_LIMIT ? " over" : ""); };
-  note.addEventListener("input", upd); upd();
+  note.addEventListener("input", function () { upd(); dirty(); }); upd();
   inputs.t_note = function () { return note.value; };
-  right.append(rub, h("label", { class: "fl", for: "tmemo", text: "관찰 메모 · 학생에게 보이지 않음" }),
+  right.append(rub,
+    h("h3", { class: "dm-h" }, h("label", { for: "tmemo", text: "📝 관찰 메모 · 학생에게 보이지 않음" })),
     h("p", { class: "hint", text: "발표 때 본 모습, 질문을 바꾼 과정 등 학생부에 쓸 사실을 적어 둡니다." }), memo,
-    h("label", { class: "fl", for: "tnote", text: "✍️ 특기사항 초안 · 학생에게 보이지 않음" }),
-    h("p", { class: "hint" }, "동기 → 질문 → 과정 → 배운 점 → 후속 순서로 써요. ", h("button", { class: "linkbtn", type: "button", text: "완성 예시 보기", onclick: function () { T.tab = "sample"; renderTeacher(); window.scrollTo(0, 0); } })),
+    h("h3", { class: "dm-h" }, h("label", { for: "tnote", text: "✍️ 특기사항 초안 · 학생에게 보이지 않음" })),
+    h("p", { class: "hint" }, "동기 → 질문 → 과정 → 배운 점 → 후속 순서로 써요. ", h("button", { class: "linkbtn", type: "button", text: "완성 예시 보기", onclick: function () { if (!closeDetail(false)) return; T.tab = "sample"; renderTeacher(); window.scrollTo(0, 0); } })),
     note, cnt);
-  const save = h("button", { class: "btn", type: "button", text: "확인·평가 저장", onclick: async function () {
+  /* 저장 */
+  const st = h("span", { class: "dm-state", role: "status", text: "" });
+  const doSave = async function () {
     const data = {}; for (const k in inputs) data[k] = inputs[k]();
-    save.disabled = true;
-    try { await api({ action: "teacher_save", tpw: T.pw, id: r.id, data: data }); Object.assign(r, data); toast(r.name + " 저장했습니다."); renderTeacher(); }
-    catch (e) { toast(e.message, true); save.disabled = false; }
-  } });
-  const reset = h("button", { class: "btn danger small", type: "button", text: "학생 비밀번호 초기화", onclick: async function () {
+    btns.forEach(function (b) { b.disabled = true; });
+    try {
+      await api({ action: "teacher_save", tpw: T.pw, id: r.id, data: data });
+      Object.assign(r, data); DM.dirty = false;
+      st.textContent = "✅ 저장했어요 · " + nowStr().slice(-5); st.className = "dm-state ok";
+      if (T.tab === "status") { const y = window.scrollY; renderTeacher(); window.scrollTo(0, y); document.querySelectorAll("table.st tr.row").forEach(function (tr) { tr.classList.toggle("sel", tr.dataset.id === r.id); }); }
+      return true;
+    } catch (e) { toast(e.message, true); return false; }
+    finally { btns.forEach(function (b) { b.disabled = false; }); }
+  };
+  const next = neighbour(r.id, 1), prev = neighbour(r.id, -1);
+  const save = h("button", { class: "btn", type: "button", text: "💾 저장", onclick: async function () { if (await doSave()) toast(r.name + " 저장했습니다."); } });
+  const saveNext = next ? h("button", { class: "btn ghost", type: "button", text: "💾 저장하고 다음 학생 → " + next.name, onclick: async function () { if (await doSave()) openDetail(next.id); } }) : null;
+  const btns = [save, saveNext].filter(Boolean);
+  const move = function (o) { return function () { if (o && closeDetail(false)) openDetail(o.id); }; };
+  const reset = h("button", { class: "btn danger small", type: "button", text: "비밀번호 초기화", onclick: async function () {
     if (!confirm(r.name + " 학생의 비밀번호를 초기화할까요? 명단에 생년월일이 있으면 생년월일(월일 4자리)로 다시 들어오고, 없으면 학생이 다음에 들어올 때 새 비밀번호를 정합니다. 보고서 내용은 그대로입니다.")) return;
     try { await api({ action: "teacher_reset", tpw: T.pw, id: r.id }); toast("초기화했습니다. 학생에게 생년월일 4자리(명단에 있으면)로 들어와 비밀번호를 바꾸라고 알려 주세요."); }
     catch (e) { toast(e.message, true); }
   } });
-  return h("div", { class: "panel", id: "detail" },
-    h("div", { class: "dhead" }, h("h2", { text: r.id + " " + r.name }),
-      h("button", { class: "btn ghost small", type: "button", text: "🖨️ 이 학생 보고서 인쇄", onclick: function () { renderPrint([r], r.id + " " + r.name, renderTeacher, true); } }), reset),
-    h("div", { class: "tgrid" }, left, right),
-    h("div", { style: "margin:16px 0 4px" }, save),
-    answersView(r));
+  /* 가운데 경계를 끌어 좌우 너비를 바꾼다(키보드 ←→도 가능). 비율은 이 기기에 기억 */
+  const body = h("div", { class: "dm-body" });
+  const setRatio = function (v) { v = Math.max(.3, Math.min(.75, v)); body.style.setProperty("--split", (v * 100).toFixed(1) + "%"); store("bum_split", v); split.setAttribute("aria-valuenow", Math.round(v * 100)); };
+  const split = h("div", { class: "dm-split", role: "separator", tabindex: "0", "aria-orientation": "vertical", "aria-label": "왼쪽·오른쪽 너비 조절", "aria-valuemin": "30", "aria-valuemax": "75",
+    onkeydown: function (e) { const v = Number(store("bum_split")) || .58; if (e.key === "ArrowLeft") { e.preventDefault(); setRatio(v - .03); } if (e.key === "ArrowRight") { e.preventDefault(); setRatio(v + .03); } },
+    onpointerdown: function (e) {
+      e.preventDefault(); split.setPointerCapture(e.pointerId); body.classList.add("dragging");
+      const mv = function (ev) { const b = body.getBoundingClientRect(); setRatio((ev.clientX - b.left) / b.width); };
+      const up = function () { split.removeEventListener("pointermove", mv); split.removeEventListener("pointerup", up); body.classList.remove("dragging"); };
+      split.addEventListener("pointermove", mv); split.addEventListener("pointerup", up);
+    } });
+  body.append(left, split, right);
+  setRatio(Number(store("bum_split")) || .58);
+  const rowsN = shownRows(), pos = rowsN.findIndex(function (x) { return x.id === r.id; });
+  return h("div", { class: "dm-back", onclick: function (e) { if (e.target === e.currentTarget) closeDetail(false); } },
+    h("div", { class: "dm", role: "dialog", "aria-modal": "true", "aria-labelledby": "dm-title" },
+      h("div", { class: "dm-head" },
+        h("h2", { id: "dm-title" }, r.id + " " + r.name, isLocked(r) ? h("span", { class: "lockb", text: "🔒 잠김" }) : null,
+          h("small", { text: (pos + 1) + " / " + rowsN.length + "명" })),
+        jump,
+        h("div", { class: "dm-tools" },
+          h("button", { class: "btn ghost small", type: "button", text: "‹ 이전", disabled: !prev || null, "aria-label": "이전 학생", onclick: move(prev) }),
+          h("button", { class: "btn ghost small", type: "button", text: "다음 ›", disabled: !next || null, "aria-label": "다음 학생", onclick: move(next) }),
+          h("button", { class: "btn ghost small", type: "button", text: "🖨️ 인쇄", onclick: function () { if (!closeDetail(false)) return; renderPrint([r], r.id + " " + r.name, renderTeacher, true); } }),
+          reset,
+          h("button", { class: "btn ghost small dm-close", type: "button", text: "✕ 닫기", "aria-label": "창 닫기 (Esc)", onclick: function () { closeDetail(false); } }))),
+      body,
+      h("div", { class: "dm-foot" }, st, h("div", { class: "dm-btns" }, saveNext, save))));
 }
 const SUM = [["관심 진로", "career"], ["질문", "question"], ["고른 이유", "reason"],
   ["🔗 이어진 활동", "lk_type"], ["🔗 그 활동에서 한 일", "lk_what"], ["🔗 남은 궁금증·이어진 점", "lk_q"], ["🔗 다른 과목 개념 연결", "lk_sub"], ["찾은 답", "r2"], ["근거 1", "r3"], ["근거 2", "r4"], ["처음 예상과 비교", "r5"], ["내 생각", "r6"],
@@ -1043,6 +1142,7 @@ function route() {
   document.body.classList.toggle("is-wide", tch);
   const fl = document.getElementById("footlink");
   if (fl) { fl.href = tch ? "#" : "#teacher"; fl.textContent = tch ? "학생용 화면" : "선생님용 화면"; }
+  if (location.hash !== "#teacher" || !T.pw) closeDetail(true);
   if (location.hash === "#teacher") { if (T.pw) renderTeacher(); else renderTeacherLogin(); }
   else if (S.id) renderStudent(); else renderLogin();
 }
